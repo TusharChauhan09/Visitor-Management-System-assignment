@@ -1,17 +1,47 @@
 import { v2 as cloudinary } from "cloudinary";
 
-function getCloudinaryConfig() {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+/** One-time in Cloudinary: Settings → Upload → unsigned preset with this exact name. */
+const VISITOR_UPLOAD_PRESET = "vms_visitors";
 
-  if (!cloudName || !apiKey || !apiSecret) {
+function parseCloudinaryUrl() {
+  const url = process.env.CLOUDINARY_URL;
+  if (!url) {
+    return null;
+  }
+  const match = /^cloudinary:\/\/([^:]+):([^@]+)@([^/?]+)/.exec(url);
+  if (!match) {
+    return null;
+  }
+  return { apiKey: match[1], apiSecret: match[2], cloudName: match[3] };
+}
+
+function ensureCloudinaryConfigured() {
+  const parsed = parseCloudinaryUrl();
+  if (!parsed) {
     throw new Error(
-      "Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env"
+      "Set CLOUDINARY_URL in .env (copy the full value from Cloudinary → API Keys)."
     );
   }
+  cloudinary.config({
+    cloud_name: parsed.cloudName,
+    api_key: parsed.apiKey,
+    api_secret: parsed.apiSecret,
+    secure: true,
+  });
+  return parsed;
+}
 
-  return { cloudName, apiKey, apiSecret };
+function cloudinaryErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message: unknown }).message;
+    if (typeof message === "string") {
+      return message;
+    }
+  }
+  return "Cloudinary could not store the photo. Check CLOUDINARY_URL in .env.";
 }
 
 export async function saveVisitorPhoto(dataUrl: string) {
@@ -25,22 +55,47 @@ export async function saveVisitorPhoto(dataUrl: string) {
     throw new Error("Photo is too large. Capture a smaller image.");
   }
 
-  const { cloudName, apiKey, apiSecret } = getCloudinaryConfig();
-  cloudinary.config({
-    cloud_name: cloudName,
-    api_key: apiKey,
-    api_secret: apiSecret,
-    secure: true,
-  });
+  ensureCloudinaryConfigured();
 
-  const result = await cloudinary.uploader.upload(dataUrl, {
-    folder: "vms/visitors",
-    resource_type: "image",
-  });
-
-  if (!result.secure_url) {
-    throw new Error("Cloudinary did not return a photo URL.");
+  async function finishUpload(
+    result: { secure_url?: string },
+    label: string
+  ) {
+    if (!result.secure_url) {
+      throw new Error(`Cloudinary did not return a photo URL (${label}).`);
+    }
+    return result.secure_url;
   }
 
-  return result.secure_url;
+  try {
+    const unsigned = await cloudinary.uploader.upload(dataUrl, {
+      upload_preset: VISITOR_UPLOAD_PRESET,
+    });
+    return await finishUpload(unsigned, "unsigned");
+  } catch (unsignedError) {
+    const unsignedMessage = cloudinaryErrorMessage(unsignedError);
+    const presetMissing = /upload preset not found/i.test(unsignedMessage);
+
+    if (!presetMissing) {
+      throw new Error(unsignedMessage);
+    }
+
+    try {
+      const signed = await cloudinary.uploader.upload(dataUrl, {
+        folder: "vms/visitors",
+        resource_type: "image",
+      });
+      return await finishUpload(signed, "signed");
+    } catch (signedError) {
+      const signedMessage = cloudinaryErrorMessage(signedError);
+      throw new Error(
+        `Photo upload failed. In Cloudinary → Settings → Upload, add an unsigned preset named "${VISITOR_UPLOAD_PRESET}", or update CLOUDINARY_URL with a key that can upload. (${signedMessage})`
+      );
+    }
+  }
+}
+
+/** Sized for email clients (Cloudinary transformation). */
+export function visitorPhotoUrlForEmail(secureUrl: string) {
+  return secureUrl.replace("/upload/", "/upload/w_360,h_360,c_fill,q_auto,f_auto/");
 }

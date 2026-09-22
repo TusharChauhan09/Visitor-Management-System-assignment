@@ -11,11 +11,13 @@ const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString }),
 });
 
-const HOST_EMAIL = "bhaiofficial123@gmail.com";
+const HOST_EMAIL = "bhaiisonline@gmail.com";
 
 async function main() {
   await prisma.employee.deleteMany({
-    where: { email: "priya.sharma@company.com" },
+    where: {
+      email: { in: ["priya.sharma@company.com", "bhaiofficial123@gmail.com"] },
+    },
   });
 
   await prisma.employee.upsert({

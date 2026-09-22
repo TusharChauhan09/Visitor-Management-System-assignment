@@ -5,10 +5,11 @@ import { Camera, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type PhotoCaptureProps = {
-  name: string;
+  onPhotoChange?: (hasPhoto: boolean) => void;
+  onCapture?: (dataUrl: string) => void;
 };
 
-export function PhotoCapture({ name }: PhotoCaptureProps) {
+export function PhotoCapture({ onPhotoChange, onCapture }: PhotoCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [photo, setPhoto] = useState("");
@@ -65,17 +66,22 @@ export function PhotoCapture({ name }: PhotoCaptureProps) {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
-    setPhoto(canvas.toDataURL("image/jpeg", 0.85));
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    setPhoto(dataUrl);
+    onPhotoChange?.(true);
+    onCapture?.(dataUrl);
     setError("");
   }
 
   function retake() {
     setPhoto("");
+    onPhotoChange?.(false);
+    onCapture?.("");
+    setError("");
   }
 
   return (
     <div className="space-y-3">
-      <input type="hidden" name={name} value={photo} required />
       <div className="overflow-hidden rounded-xl border border-border bg-muted/40">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element

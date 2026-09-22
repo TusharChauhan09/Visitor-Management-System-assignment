@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { createVisitorEntry } from "@/app/actions/visits";
 import { PhotoCapture } from "@/components/visit/photo-capture";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ export function VisitorRegistrationForm({
 }: {
   employees: EmployeeOption[];
 }) {
+  const [hasPhoto, setHasPhoto] = useState(false);
+  const [photoData, setPhotoData] = useState("");
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     createVisitorEntry,
     {}
@@ -34,6 +36,8 @@ export function VisitorRegistrationForm({
 
   return (
     <form action={formAction} className="max-w-2xl space-y-8">
+      <input type="hidden" name="photoData" value={photoData} />
+
       {state.error ? (
         <p
           className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
@@ -115,11 +119,16 @@ export function VisitorRegistrationForm({
           </p>
         </div>
         <div className="max-w-sm">
-          <PhotoCapture name="photoData" />
+          <PhotoCapture onPhotoChange={setHasPhoto} onCapture={setPhotoData} />
         </div>
       </section>
 
-      <Button type="submit" size="lg" className="h-11 px-6" disabled={pending}>
+      <Button
+        type="submit"
+        size="lg"
+        className="h-11 px-6"
+        disabled={pending || !hasPhoto || !photoData}
+      >
         {pending ? "Sending request…" : "Submit for host approval"}
       </Button>
     </form>

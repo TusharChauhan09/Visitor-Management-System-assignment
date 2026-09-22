@@ -74,7 +74,7 @@ export async function createVisitorEntry(
     },
   });
 
-  await sendHostApprovalEmail({
+  const emailResult = await sendHostApprovalEmail({
     hostEmail: host.email,
     hostName: host.fullName,
     visitorName: fullName,
@@ -86,6 +86,13 @@ export async function createVisitorEntry(
     requestedAt,
     approvalToken,
   });
+
+  if (emailResult.error) {
+    console.error("[createVisitorEntry] Host email failed:", emailResult.error);
+    redirect(
+      `/entry/status/${visit.id}?emailError=${encodeURIComponent(emailResult.error)}`
+    );
+  }
 
   redirect(`/entry/status/${visit.id}`);
 }
