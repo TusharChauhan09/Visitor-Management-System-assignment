@@ -1,119 +1,97 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useActionState, useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { checkInByPassCode } from "@/app/actions/visits";
+import { QrPassScanner } from "@/components/visit/qr-pass-scanner";
 import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/lib/types";
-
-const SCANNER_ID = "visitor-pass-scanner";
 
 const fieldClass =
   "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
-async function pickCameraId() {
-  try {
-    const cameras = await Html5Qrcode.getCameras();
-    if (cameras.length === 0) {
-      return { facingMode: "environment" as const };
-    }
-    const back = cameras.find((c) => /back|rear|environment/i.test(c.label));
-    if (back) {
-      return back.id;
-    }
-    return cameras[0].id;
-  } catch {
-    return { facingMode: "user" as const };
+async function runCheckIn(code: string) {
+  const response = await fetch("/api/check-in", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  const data = (await response.json()) as {
+    visitId?: string;
+    error?: string;
+  };
+
+  if (!response.ok || data.error) {
+    return { error: data.error ?? "Check-in failed." };
   }
+
+  if (!data.visitId) {
+    return { error: "Check-in did not return a visit." };
+  }
+
+  return { visitId: data.visitId };
 }
 
 export function PassCheckIn() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const prefilledCode = searchParams.get("code") ?? "";
+  const prefilledCode = searchParams.get("code")?.trim() ?? "";
+  const scanLockRef = useRef(false);
   const [scanError, setScanError] = useState("");
-  const [scanning, setScanning] = useState(true);
-  const processingRef = useRef(false);
+  const [scanning, setScanning] = useState(!prefilledCode);
+  const [scannerKey, setScannerKey] = useState(0);
   const [formState, formAction, pending] = useActionState<ActionState, FormData>(
     checkInByPassCode,
     {}
   );
 
+  const handleCheckIn = useCallback(
+    async (code: string) => {
+      if (scanLockRef.current) {
+        return;
+      }
+      scanLockRef.current = true;
+      setScanError("");
+      setScanning(false);
+
+      const result = await runCheckIn(code);
+      if (result.error) {
+        setScanError(result.error);
+        scanLockRef.current = false;
+        return;
+      }
+
+      router.push(`/entry/status/${result.visitId}`);
+    },
+    [router]
+  );
+
   useEffect(() => {
-    if (!scanning) {
+    if (!prefilledCode) {
       return;
     }
+    void handleCheckIn(prefilledCode);
+  }, [prefilledCode, handleCheckIn]);
 
-    let scanner: Html5Qrcode | null = null;
-    let cancelled = false;
+  const handleDecode = useCallback(
+    (text: string) => {
+      void handleCheckIn(text);
+    },
+    [handleCheckIn]
+  );
 
-    async function run() {
-      scanner = new Html5Qrcode(SCANNER_ID);
-      const camera = await pickCameraId();
+  const handleScannerError = useCallback((message: string) => {
+    setScanError(message);
+    setScanning(false);
+    scanLockRef.current = false;
+  }, []);
 
-      try {
-        await scanner.start(
-          camera,
-          { fps: 10, qrbox: { width: 260, height: 260 } },
-          async (decodedText) => {
-            if (cancelled || processingRef.current) {
-              return;
-            }
-            processingRef.current = true;
-            setScanning(false);
-
-            try {
-              await scanner?.stop();
-            } catch {
-              // ignore
-            }
-
-            const response = await fetch("/api/check-in", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ code: decodedText }),
-            });
-            const data = (await response.json()) as {
-              visitId?: string;
-              error?: string;
-            };
-
-            if (!response.ok || data.error) {
-              setScanError(data.error ?? "Check-in failed.");
-              processingRef.current = false;
-              return;
-            }
-
-            if (data.visitId) {
-              router.push(`/entry/status/${data.visitId}`);
-            }
-          },
-          () => undefined
-        );
-      } catch {
-        setScanError(
-          "Camera could not start. Allow camera access or type the pass code below."
-        );
-      }
-    }
-
-    void run();
-
-    return () => {
-      cancelled = true;
-      if (scanner?.isScanning) {
-        scanner
-          .stop()
-          .catch(() => undefined)
-          .finally(() => {
-            scanner?.clear();
-          });
-      } else {
-        scanner?.clear();
-      }
-    };
-  }, [scanning, router]);
+  const restartScanner = () => {
+    setScanError("");
+    scanLockRef.current = false;
+    setScannerKey((k) => k + 1);
+    setScanning(true);
+  };
 
   const error = scanError || formState.error;
 
@@ -128,26 +106,24 @@ export function PassCheckIn() {
         </p>
       ) : null}
 
+      {prefilledCode && !scanning && !error ? (
+        <p className="text-sm text-muted-foreground">Checking in from your pass link…</p>
+      ) : null}
+
       <section className="space-y-3">
         <h2 className="text-base font-semibold tracking-tight">Scan QR pass</h2>
         <p className="text-sm text-muted-foreground">
-          Hold the e-pass from email or SMS in front of the camera.
+          Point the camera at the visitor&apos;s pass QR code.
         </p>
-        <div
-          id={SCANNER_ID}
-          className="min-h-[280px] overflow-hidden rounded-xl border border-border bg-muted/40 [&_video]:w-full"
-        />
+        {scanning ? (
+          <QrPassScanner key={scannerKey} onDecode={handleDecode} onError={handleScannerError} />
+        ) : (
+          <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+            Camera is off. Scan again or enter the pass code below.
+          </div>
+        )}
         {!scanning ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            onClick={() => {
-              setScanError("");
-              processingRef.current = false;
-              setScanning(true);
-            }}
-          >
+          <Button type="button" variant="outline" size="lg" onClick={restartScanner}>
             Scan again
           </Button>
         ) : null}

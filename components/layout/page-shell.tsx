@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { cn } from "@/lib/utils";
 
 type PageShellProps = {
-  title: string;
+  title?: string;
   description?: string;
   backHref?: string;
   backLabel?: string;
@@ -34,24 +34,21 @@ export function PageShell({
         }
       />
 
-      <div className="flex flex-1 flex-col lg:flex-row">
-        <aside
-          className="border-b border-border px-6 py-8 lg:w-80 lg:shrink-0 lg:border-b-0 lg:border-r lg:px-12 lg:py-14 xl:w-96"
-        >
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">
-            {title}
-          </h1>
-          {description ? (
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground lg:text-base">
-              {description}
-            </p>
-          ) : null}
-        </aside>
-
-        <main className="flex-1 px-6 py-8 lg:px-12 lg:py-14">
-          {children}
-        </main>
-      </div>
+      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8 lg:py-10">
+        {title ? (
+          <header className="mb-8">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              {title}
+            </h1>
+            {description ? (
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {description}
+              </p>
+            ) : null}
+          </header>
+        ) : null}
+        {children}
+      </main>
     </div>
   );
 }

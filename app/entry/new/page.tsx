@@ -9,10 +9,7 @@ export default async function NewEntryPage() {
   });
 
   return (
-    <PageShell
-      title="New visitor entry"
-      description="Security collects your details and photo, then the host is asked to approve. A QR pass is issued after approval."
-    >
+    <PageShell title="New visitor entry">
       <VisitorRegistrationForm employees={employees} />
     </PageShell>
   );

@@ -4,10 +4,7 @@ import { PassCheckIn } from "@/components/visit/pass-check-in";
 
 export default function ScanPassPage() {
   return (
-    <PageShell
-      title="I have a pass"
-      description="Scan the QR from a pre-approved visit. Entry is allowed only inside the approved time window."
-    >
+    <PageShell title="I have a pass">
       <Suspense fallback={<p className="text-sm text-muted-foreground">Loading scanner…</p>}>
         <PassCheckIn />
       </Suspense>

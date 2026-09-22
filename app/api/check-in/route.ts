@@ -9,12 +9,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const code = body.code?.trim();
-  if (!code) {
+  const raw = typeof body.code === "string" ? body.code.trim() : "";
+  if (!raw) {
     return NextResponse.json({ error: "Pass code is required." }, { status: 400 });
   }
 
-  const result = await checkInVisit(code);
+  const result = await checkInVisit(raw);
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
