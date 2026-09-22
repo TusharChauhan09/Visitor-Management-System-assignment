@@ -4,11 +4,13 @@ import { useActionState, useState } from "react";
 import { createVisitorEntry } from "@/app/actions/visits";
 import { PhotoCapture } from "@/components/visit/photo-capture";
 import { Button } from "@/components/ui/button";
+import { fieldClass } from "@/lib/form";
 import type { ActionState, EmployeeOption } from "@/lib/types";
 import { VISIT_PURPOSE_OPTIONS } from "@/lib/visits/constants";
-
-const fieldClass =
-  "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+import {
+  defaultVisitFromValue,
+  defaultVisitToValue,
+} from "@/lib/visits/visit-window";
 
 export function VisitorRegistrationForm({
   employees,
@@ -25,11 +27,7 @@ export function VisitorRegistrationForm({
   if (employees.length === 0) {
     return (
       <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-        No host employees are in the system yet. Run{" "}
-        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-          npm run db:seed
-        </code>{" "}
-        to add one.
+        No approved host employees yet. Ask an employee to register and get admin approval.
       </p>
     );
   }
@@ -48,12 +46,7 @@ export function VisitorRegistrationForm({
       ) : null}
 
       <section className="space-y-4">
-        <div>
-          <h2 className="text-base font-semibold tracking-tight">Visitor details</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Legal name and contact as captured at the desk.
-          </p>
-        </div>
+        <h2 className="text-base font-semibold tracking-tight">Visitor details</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-1.5 sm:col-span-2">
             <span className="text-sm font-medium">Full name</span>
@@ -68,40 +61,49 @@ export function VisitorRegistrationForm({
             <input name="phone" type="tel" autoComplete="tel" required className={fieldClass} />
           </label>
           <label className="space-y-1.5 sm:col-span-2">
-            <span className="text-sm font-medium">
-              Company <span className="font-normal text-muted-foreground">(if representing a business)</span>
-            </span>
+            <span className="text-sm font-medium">Company (optional)</span>
             <input name="company" className={fieldClass} />
           </label>
         </div>
       </section>
 
       <section className="space-y-4">
-        <div>
-          <h2 className="text-base font-semibold tracking-tight">Visit</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Why you are here and who you are visiting.
-          </p>
-        </div>
+        <h2 className="text-base font-semibold tracking-tight">Visit</h2>
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Purpose of visit</span>
+          <span className="text-sm font-medium">Purpose</span>
           <select name="purpose" required defaultValue="" className={fieldClass}>
-            <option value="" disabled>
-              Select a purpose
-            </option>
+            <option value="" disabled>Select a purpose</option>
             {VISIT_PURPOSE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
+              <option key={option} value={option}>{option}</option>
             ))}
           </select>
         </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium">Visit from</span>
+            <input
+              type="datetime-local"
+              name="visitFrom"
+              required
+              defaultValue={defaultVisitFromValue()}
+              className={fieldClass}
+            />
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium">Visit to</span>
+            <input
+              type="datetime-local"
+              name="visitTo"
+              required
+              defaultValue={defaultVisitToValue()}
+              className={fieldClass}
+            />
+          </label>
+        </div>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Host employee</span>
           <select name="hostId" required defaultValue="" className={fieldClass}>
-            <option value="" disabled>
-              Select name and department
-            </option>
+            <option value="" disabled>Select name and department</option>
             {employees.map((employee) => (
               <option key={employee.id} value={employee.id}>
                 {employee.fullName} — {employee.department}
@@ -112,12 +114,7 @@ export function VisitorRegistrationForm({
       </section>
 
       <section className="space-y-4">
-        <div>
-          <h2 className="text-base font-semibold tracking-tight">Photo</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Required at the desk for identity verification.
-          </p>
-        </div>
+        <h2 className="text-base font-semibold tracking-tight">Photo</h2>
         <div className="max-w-sm">
           <PhotoCapture onPhotoChange={setHasPhoto} onCapture={setPhotoData} />
         </div>

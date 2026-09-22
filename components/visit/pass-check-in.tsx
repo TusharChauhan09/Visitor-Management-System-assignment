@@ -5,10 +5,8 @@ import { useActionState, useCallback, useEffect, useRef, useState } from "react"
 import { checkInByPassCode } from "@/app/actions/visits";
 import { QrPassScanner } from "@/components/visit/qr-pass-scanner";
 import { Button } from "@/components/ui/button";
+import { fieldClass } from "@/lib/form";
 import type { ActionState } from "@/lib/types";
-
-const fieldClass =
-  "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 async function runCheckIn(code: string) {
   const response = await fetch("/api/check-in", {
@@ -16,19 +14,13 @@ async function runCheckIn(code: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ code }),
   });
-  const data = (await response.json()) as {
-    visitId?: string;
-    error?: string;
-  };
-
+  const data = (await response.json()) as { visitId?: string; error?: string };
   if (!response.ok || data.error) {
     return { error: data.error ?? "Check-in failed." };
   }
-
   if (!data.visitId) {
     return { error: "Check-in did not return a visit." };
   }
-
   return { visitId: data.visitId };
 }
 
@@ -47,9 +39,7 @@ export function PassCheckIn() {
 
   const handleCheckIn = useCallback(
     async (code: string) => {
-      if (scanLockRef.current) {
-        return;
-      }
+      if (scanLockRef.current) return;
       scanLockRef.current = true;
       setScanError("");
       setScanning(false);
@@ -60,48 +50,23 @@ export function PassCheckIn() {
         scanLockRef.current = false;
         return;
       }
-
       router.push(`/entry/status/${result.visitId}`);
     },
     [router]
   );
 
   useEffect(() => {
-    if (!prefilledCode) {
-      return;
+    if (prefilledCode) {
+      void handleCheckIn(prefilledCode);
     }
-    void handleCheckIn(prefilledCode);
   }, [prefilledCode, handleCheckIn]);
-
-  const handleDecode = useCallback(
-    (text: string) => {
-      void handleCheckIn(text);
-    },
-    [handleCheckIn]
-  );
-
-  const handleScannerError = useCallback((message: string) => {
-    setScanError(message);
-    setScanning(false);
-    scanLockRef.current = false;
-  }, []);
-
-  const restartScanner = () => {
-    setScanError("");
-    scanLockRef.current = false;
-    setScannerKey((k) => k + 1);
-    setScanning(true);
-  };
 
   const error = scanError || formState.error;
 
   return (
     <div className="max-w-xl space-y-10">
       {error ? (
-        <p
-          className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
+        <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
@@ -112,18 +77,33 @@ export function PassCheckIn() {
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold tracking-tight">Scan QR pass</h2>
-        <p className="text-sm text-muted-foreground">
-          Point the camera at the visitor&apos;s pass QR code.
-        </p>
         {scanning ? (
-          <QrPassScanner key={scannerKey} onDecode={handleDecode} onError={handleScannerError} />
+          <QrPassScanner
+            key={scannerKey}
+            onDecode={(text) => void handleCheckIn(text)}
+            onError={(message) => {
+              setScanError(message);
+              setScanning(false);
+              scanLockRef.current = false;
+            }}
+          />
         ) : (
           <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
             Camera is off. Scan again or enter the pass code below.
           </div>
         )}
         {!scanning ? (
-          <Button type="button" variant="outline" size="lg" onClick={restartScanner}>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => {
+              setScanError("");
+              scanLockRef.current = false;
+              setScannerKey((k) => k + 1);
+              setScanning(true);
+            }}
+          >
             Scan again
           </Button>
         ) : null}
@@ -133,12 +113,7 @@ export function PassCheckIn() {
         <h2 className="text-base font-semibold tracking-tight">Or type the pass code</h2>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Pass code</span>
-          <input
-            name="passCode"
-            className={fieldClass}
-            autoComplete="off"
-            defaultValue={prefilledCode}
-          />
+          <input name="passCode" className={fieldClass} autoComplete="off" defaultValue={prefilledCode} />
         </label>
         <Button type="submit" size="lg" className="h-11" disabled={pending}>
           {pending ? "Checking…" : "Check in"}

@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { getAppUrl } from "@/lib/config/app-url";
 import { visitorPhotoUrlForEmail } from "@/lib/visitors/photos";
-import type { HostApprovalEmailInput } from "@/lib/types/email";
+import type { HostApprovalEmailInput } from "@/lib/types";
 
 function escapeHtml(value: string) {
   return value

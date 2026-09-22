@@ -39,16 +39,18 @@ export async function checkInVisit(rawCode: string) {
     return { visitId: visit.id };
   }
 
-  if (visit.preApproved && visit.windowStart && visit.windowEnd) {
+  if (visit.windowStart && visit.windowEnd) {
     const now = new Date();
     if (now < visit.windowStart) {
       return { error: "This pass is not valid yet. Come back in the approved window." };
     }
     if (now > visit.windowEnd) {
-      await prisma.visit.update({
-        where: { id: visit.id },
-        data: { status: "EXPIRED" },
-      });
+      if (visit.status === "APPROVED") {
+        await prisma.visit.update({
+          where: { id: visit.id },
+          data: { status: "EXPIRED" },
+        });
+      }
       return { error: "The approved time window has passed. This pass has expired." };
     }
   }

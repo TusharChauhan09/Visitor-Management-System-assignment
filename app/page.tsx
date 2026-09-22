@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ClipboardList, QrCode } from "lucide-react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { EntryOptionCard } from "@/components/visit/entry-option-card";
@@ -5,7 +6,24 @@ import { EntryOptionCard } from "@/components/visit/entry-option-card";
 export default function EntryPage() {
   return (
     <div className="flex min-h-full flex-1 flex-col bg-background">
-      <SiteHeader />
+      <SiteHeader
+        trailing={
+          <div className="flex items-center gap-4">
+            <Link
+              href="/employee/login"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Employee
+            </Link>
+            <Link
+              href="/admin/login"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Admin
+            </Link>
+          </div>
+        }
+      />
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10 lg:py-14">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">

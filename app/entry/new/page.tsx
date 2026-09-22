@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 
 export default async function NewEntryPage() {
   const employees = await prisma.employee.findMany({
+    where: { isApproved: true },
     orderBy: { fullName: "asc" },
     select: { id: true, fullName: true, department: true },
   });

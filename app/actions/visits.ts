@@ -3,20 +3,12 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { sendHostApprovalEmail } from "@/lib/email/host-approval";
+import { requiredString, optionalString } from "@/lib/form";
 import { saveVisitorPhoto } from "@/lib/visitors/photos";
 import { prisma } from "@/lib/db/prisma";
 import { checkInVisit } from "@/lib/visits/check-in";
+import { parseVisitWindow } from "@/lib/visits/visit-window";
 import type { ActionState } from "@/lib/types";
-
-export type { ActionState };
-
-function requiredString(formData: FormData, key: string) {
-  const value = formData.get(key);
-  if (typeof value !== "string" || value.trim().length === 0) {
-    return null;
-  }
-  return value.trim();
-}
 
 export async function createVisitorEntry(
   _prev: ActionState,
@@ -28,11 +20,9 @@ export async function createVisitorEntry(
   const purpose = requiredString(formData, "purpose");
   const hostId = requiredString(formData, "hostId");
   const photoData = requiredString(formData, "photoData");
-  const companyRaw = formData.get("company");
-  const company =
-    typeof companyRaw === "string" && companyRaw.trim().length > 0
-      ? companyRaw.trim()
-      : null;
+  const visitFrom = requiredString(formData, "visitFrom");
+  const visitTo = requiredString(formData, "visitTo");
+  const company = optionalString(formData, "company");
 
   if (!fullName || !email || !phone || !purpose || !hostId) {
     return { error: "Fill in every required field before submitting." };
@@ -42,8 +32,17 @@ export async function createVisitorEntry(
     return { error: "A photo is required at the registration desk." };
   }
 
+  if (!visitFrom || !visitTo) {
+    return { error: "Choose when your visit starts and ends." };
+  }
+
+  const window = parseVisitWindow(visitFrom, visitTo);
+  if ("error" in window) {
+    return { error: window.error };
+  }
+
   const host = await prisma.employee.findUnique({ where: { id: hostId } });
-  if (!host) {
+  if (!host?.isApproved) {
     return { error: "Select a host employee from the list." };
   }
 
@@ -67,8 +66,9 @@ export async function createVisitorEntry(
     data: {
       purpose,
       photoUrl,
-      preApproved: false,
       approvalToken,
+      windowStart: window.windowStart,
+      windowEnd: window.windowEnd,
       visitorId: visitor.id,
       hostId: host.id,
     },
@@ -88,7 +88,6 @@ export async function createVisitorEntry(
   });
 
   if (emailResult.error) {
-    console.error("[createVisitorEntry] Host email failed:", emailResult.error);
     redirect(
       `/entry/status/${visit.id}?emailError=${encodeURIComponent(emailResult.error)}`
     );
@@ -112,15 +111,4 @@ export async function checkInByPassCode(
   }
 
   redirect(`/entry/status/${result.visitId}`);
-}
-
-export async function checkInByScannedCode(
-  code: string
-): Promise<{ visitId?: string; error?: string }> {
-  const trimmed = code.trim();
-  if (!trimmed) {
-    return { error: "No QR code was read. Try again." };
-  }
-
-  return checkInVisit(trimmed);
 }

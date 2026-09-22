@@ -1,5 +1,15 @@
 import Image from "next/image";
-import type { HostVisitSummaryProps } from "@/lib/types";
+
+type HostVisitSummaryProps = {
+  visitorName: string;
+  visitorEmail: string;
+  visitorPhone: string;
+  company: string | null;
+  purpose: string;
+  photoUrl: string | null;
+  hostName: string;
+  department: string;
+};
 
 export function HostVisitSummary({
   visitorName,
