@@ -1,10 +1,9 @@
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
-import { SiteHeader } from "@/components/layout/site-header";
+import { DeskHomeLink, DeskLayout } from "@/components/layout/desk-layout";
 import { requireAdmin } from "@/lib/auth/guards";
 import type { AdminEmployeeEntry } from "@/lib/types";
 import { countByStatus, serializeVisitLog } from "@/lib/visits/visit-log";
 import { prisma } from "@/lib/db/prisma";
-import Link from "next/link";
 
 function toAdminEmployee(
   employee: {
@@ -71,25 +70,13 @@ export default async function AdminPage() {
     }));
 
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-background app-mesh-bg">
-      <SiteHeader
-        trailing={
-          <Link
-            href="/"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            Desk
-          </Link>
-        }
+    <DeskLayout trailing={<DeskHomeLink />}>
+      <AdminDashboard
+        visits={visits.map(serializeVisitLog)}
+        employees={employeeRows}
+        pendingEmployees={pendingEmployees}
+        statusCounts={countByStatus(visits)}
       />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8 lg:py-10">
-        <AdminDashboard
-          visits={visits.map(serializeVisitLog)}
-          employees={employeeRows}
-          pendingEmployees={pendingEmployees}
-          statusCounts={countByStatus(visits)}
-        />
-      </main>
-    </div>
+    </DeskLayout>
   );
 }

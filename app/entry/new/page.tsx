@@ -10,7 +10,7 @@ export default async function NewEntryPage() {
   });
 
   return (
-    <PageShell title="New visitor entry">
+    <PageShell title="New visitor entry" wide>
       <VisitorRegistrationForm employees={employees} />
     </PageShell>
   );

@@ -7,7 +7,6 @@ import { logoutAdmin } from "@/app/actions/auth";
 import { EmployeeDirectory } from "@/components/admin/employee-directory";
 import type { AdminEmployeeEntry, PendingEmployeeEntry, VisitLogEntry } from "@/lib/types";
 import { StatCards } from "@/components/dashboard/stat-cards";
-import { StatusOverview } from "@/components/dashboard/status-overview";
 import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { VisitLogTable } from "@/components/dashboard/visit-log-table";
@@ -58,46 +57,27 @@ export function AdminDashboard({
   return (
     <>
       <DashboardFrame
-        title="Admin dashboard"
-        description="Visitor logs, host directory, and access requests in one place."
+        title="Admin"
+        description="Visitor floor and host access"
         actions={headerActions}
-        defaultTab="overview"
+        defaultTab="visitors"
         tabs={[
           {
-            value: "overview",
-            label: "Overview",
-            content: (
-              <div className="space-y-6 pb-4">
-                <StatCards stats={stats} />
-                <StatusOverview statusCounts={statusCounts} />
-              </div>
-            ),
-          },
-          {
             value: "visitors",
-            label: "Visitor logs",
+            label: "Visits",
             badge: visits.length,
             content: (
-              <div className="space-y-3 pb-4">
-                <p className="text-sm text-muted-foreground">
-                  Select a row to open full visitor and host details.
-                </p>
+              <div className="flex min-h-0 flex-1 flex-col gap-3">
+                <StatCards stats={stats} />
                 <VisitLogTable visits={visits} showHost />
               </div>
             ),
           },
           {
             value: "employees",
-            label: "Employees",
+            label: "Hosts",
             badge: employees.length,
-            content: (
-              <div className="space-y-3 pb-4">
-                <p className="text-sm text-muted-foreground">
-                  Registered hosts. Pending accounts need your approval.
-                </p>
-                <EmployeeDirectory employees={employees} />
-              </div>
-            ),
+            content: <EmployeeDirectory employees={employees} />,
           },
         ]}
       />

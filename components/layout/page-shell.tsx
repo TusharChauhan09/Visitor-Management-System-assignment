@@ -26,7 +26,7 @@ export function PageShell({
   wide,
 }: PageShellProps) {
   return (
-    <AppCanvas variant="lobby" className={className}>
+    <AppCanvas className={className}>
       <SiteHeader
         trailing={
           <Link
@@ -41,8 +41,8 @@ export function PageShell({
 
       <main
         className={cn(
-          "mx-auto w-full flex-1 px-6 py-8 lg:py-10",
-          wide ? "max-w-4xl" : "max-w-3xl"
+          "mx-auto w-full flex-1 px-6 py-8",
+          wide ? "max-w-6xl" : "max-w-3xl"
         )}
       >
         {title ? (

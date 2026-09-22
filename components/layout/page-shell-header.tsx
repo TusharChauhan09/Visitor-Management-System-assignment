@@ -10,15 +10,13 @@ export function PageShellHeader({
   description?: string;
 }) {
   return (
-    <FadeIn className="mb-8">
+    <FadeIn className="mb-4 shrink-0">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           {title}
         </h1>
         {description ? (
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            {description}
-          </p>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">{description}</p>
         ) : null}
       </header>
     </FadeIn>

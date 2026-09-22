@@ -3,13 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type PhotoCaptureProps = {
   onPhotoChange?: (hasPhoto: boolean) => void;
   onCapture?: (dataUrl: string) => void;
+  compact?: boolean;
 };
 
-export function PhotoCapture({ onPhotoChange, onCapture }: PhotoCaptureProps) {
+export function PhotoCapture({ onPhotoChange, onCapture, compact }: PhotoCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [photo, setPhoto] = useState("");
@@ -82,13 +84,13 @@ export function PhotoCapture({ onPhotoChange, onCapture }: PhotoCaptureProps) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-xl border border-border bg-muted/40">
+      <div className="overflow-hidden rounded-lg border border-border bg-muted/40">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photo}
             alt="Captured visitor"
-            className="aspect-[4/3] w-full object-cover"
+            className={cn("w-full object-cover", compact ? "aspect-square max-h-56" : "aspect-[4/3]")}
           />
         ) : (
           <video
@@ -96,7 +98,7 @@ export function PhotoCapture({ onPhotoChange, onCapture }: PhotoCaptureProps) {
             autoPlay
             muted
             playsInline
-            className="aspect-[4/3] w-full bg-black object-cover"
+            className={cn("w-full bg-black object-cover", compact ? "aspect-square max-h-56" : "aspect-[4/3]")}
           />
         )}
       </div>

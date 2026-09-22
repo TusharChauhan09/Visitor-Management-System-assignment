@@ -11,22 +11,22 @@ export function SiteHeader({ trailing, className }: SiteHeaderProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-10 border-b border-border/70 bg-background/90 backdrop-blur-md",
+        "sticky top-0 z-10 shrink-0 border-b border-border bg-background",
         className
       )}
     >
-      <div className="flex h-16 items-center justify-between gap-6 px-6 lg:h-[4.25rem] lg:px-12">
+      <div className="flex h-14 items-center justify-between gap-4 px-6">
         <Link
           href="/"
           className="flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <span
-            className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-foreground text-background"
             aria-hidden
           >
             <Shield className="size-4" strokeWidth={2.25} />
           </span>
-          <span className="min-w-0 truncate text-base font-semibold tracking-tight lg:text-[1.05rem]">
+          <span className="min-w-0 truncate text-base font-semibold tracking-tight">
             Visitor Management
           </span>
         </Link>

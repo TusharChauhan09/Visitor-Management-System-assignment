@@ -18,35 +18,35 @@ export function EmployeeDirectory({ employees }: { employees: AdminEmployeeEntry
   }
 
   return (
-    <>
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-border bg-muted/40 text-muted-foreground">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card">
+        <table className="w-full min-w-[680px] text-left text-sm">
+          <thead className="sticky top-0 z-[1] border-b border-border bg-card text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 font-medium">Employee</th>
-              <th className="px-4 py-3 font-medium">Department</th>
-              <th className="px-4 py-3 font-medium">Contact</th>
-              <th className="px-4 py-3 font-medium">Access</th>
-              <th className="px-4 py-3 font-medium">Visits</th>
+              <th className="px-3 py-2 font-medium">Employee</th>
+              <th className="px-3 py-2 font-medium">Department</th>
+              <th className="px-3 py-2 font-medium">Contact</th>
+              <th className="px-3 py-2 font-medium">Access</th>
+              <th className="px-3 py-2 font-medium">Visits</th>
             </tr>
           </thead>
           <tbody>
             {employees.map((employee) => (
               <tr
                 key={employee.id}
-                className="cursor-pointer border-b border-border/70 transition-colors last:border-0 hover:bg-muted/30"
+                className="cursor-pointer border-b border-border/60 last:border-0 hover:bg-muted/40"
                 onClick={() => setSelected(employee)}
               >
-                <td className="px-4 py-3">
+                <td className="px-3 py-2">
                   <p className="font-medium text-foreground">{employee.fullName}</p>
                   <p className="text-xs text-muted-foreground">{employee.email}</p>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{employee.department}</td>
-                <td className="px-4 py-3 text-muted-foreground">{employee.phone}</td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-2 text-muted-foreground">{employee.department}</td>
+                <td className="px-3 py-2 text-muted-foreground">{employee.phone}</td>
+                <td className="px-3 py-2">
                   <AccessBadge approved={employee.isApproved} />
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">
+                <td className="px-3 py-2 text-muted-foreground">
                   {employee.totalVisits} total
                   {employee.pendingVisits > 0 ? (
                     <span className="block text-xs text-amber-700 dark:text-amber-300">
@@ -136,7 +136,7 @@ export function EmployeeDirectory({ employees }: { employees: AdminEmployeeEntry
           </div>
         ) : null}
       </Modal>
-    </>
+    </div>
   );
 }
 

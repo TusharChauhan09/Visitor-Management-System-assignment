@@ -11,14 +11,12 @@ export function HomeEntryOptions() {
         title="New visitor entry"
         description="Register at the desk. Your host approves before you get a pass."
         icon={ClipboardList}
-        index={0}
       />
       <EntryOptionCard
         href="/entry/scan"
         title="I have a pass"
         description="Scan your QR or enter your pass code."
         icon={QrCode}
-        index={1}
       />
     </div>
   );

@@ -6,7 +6,6 @@ import { approvePendingVisit, denyPendingVisit } from "@/app/actions/employee";
 import { logoutEmployee } from "@/app/actions/auth";
 import type { VisitLogEntry } from "@/lib/types";
 import { StatCards } from "@/components/dashboard/stat-cards";
-import { StatusOverview } from "@/components/dashboard/status-overview";
 import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { VisitLogTable } from "@/components/dashboard/visit-log-table";
@@ -14,7 +13,6 @@ import { VisitDetailPanel } from "@/components/dashboard/visit-detail-panel";
 import { PreInviteForm } from "@/components/employee/pre-invite-form";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 type EmployeeDashboardProps = {
@@ -94,35 +92,29 @@ export function EmployeeDashboard({
         title={employeeName}
         description={`${department} · ${email}`}
         actions={headerActions}
-        defaultTab="overview"
+        defaultTab="visitors"
         tabs={[
           {
-            value: "overview",
-            label: "Overview",
-            badge: pendingVisits.length > 0 ? pendingVisits.length : undefined,
+            value: "visitors",
+            label: "Visits",
+            badge: pendingVisits.length > 0 ? pendingVisits.length : visits.length,
             content: (
-              <div className="space-y-6 pb-4">
-                <Card className="bg-card/80 shadow-none">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Today&apos;s pre-invites</CardTitle>
-                    <CardDescription>
-                      {remainingToday} of {maxVisitorsPerDay} slots left for scheduled visitors.
-                    </CardDescription>
-                  </CardHeader>
-                  {inviteUrl ? (
-                    <CardContent>
-                      <p className="text-xs text-muted-foreground">Latest check-in link</p>
-                      <a
-                        className="mt-1 block break-all text-sm font-medium text-primary underline-offset-4 hover:underline"
-                        href={inviteUrl}
-                      >
-                        {inviteUrl}
-                      </a>
-                    </CardContent>
-                  ) : null}
-                </Card>
-                <StatCards stats={stats} />
-                <StatusOverview statusCounts={statusCounts} />
+              <div className="flex min-h-0 flex-1 flex-col gap-3">
+                <StatCards
+                  stats={[
+                    ...stats,
+                    { label: "Invites left today", value: remainingToday, hint: `${maxVisitorsPerDay} daily` },
+                  ]}
+                />
+                {inviteUrl ? (
+                  <p className="shrink-0 truncate text-xs text-muted-foreground">
+                    Latest pass:{" "}
+                    <a className="font-medium text-primary underline-offset-4 hover:underline" href={inviteUrl}>
+                      {inviteUrl}
+                    </a>
+                  </p>
+                ) : null}
+                <VisitLogTable visits={visits} showHost={false} />
               </div>
             ),
           },
@@ -130,19 +122,8 @@ export function EmployeeDashboard({
             value: "invite",
             label: "Pre-invite",
             content: (
-              <div className="pb-4">
+              <div className="min-h-0 flex-1 overflow-auto">
                 <PreInviteForm remainingToday={remainingToday} />
-              </div>
-            ),
-          },
-          {
-            value: "visitors",
-            label: "Visitor log",
-            badge: visits.length,
-            content: (
-              <div className="space-y-3 pb-4">
-                <p className="text-sm text-muted-foreground">Tap a row for visit details.</p>
-                <VisitLogTable visits={visits} showHost={false} />
               </div>
             ),
           },
