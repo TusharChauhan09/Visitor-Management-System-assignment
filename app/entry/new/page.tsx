@@ -1,6 +1,6 @@
-import { PageShell } from "@/components/page-shell";
-import { VisitorRegistrationForm } from "@/components/visitor-registration-form";
-import { prisma } from "@/lib/prisma";
+import { PageShell } from "@/components/layout/page-shell";
+import { VisitorRegistrationForm } from "@/components/visit/visitor-registration-form";
+import { prisma } from "@/lib/db/prisma";
 
 export default async function NewEntryPage() {
   const employees = await prisma.employee.findMany({

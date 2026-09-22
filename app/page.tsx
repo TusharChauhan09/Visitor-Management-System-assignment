@@ -1,6 +1,6 @@
 import { ClipboardList, QrCode } from "lucide-react";
-import { EntryOptionCard } from "@/components/entry-option-card";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeader } from "@/components/layout/site-header";
+import { EntryOptionCard } from "@/components/visit/entry-option-card";
 
 export default function EntryPage() {
   return (

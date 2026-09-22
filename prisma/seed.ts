@@ -11,9 +11,15 @@ const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString }),
 });
 
+const HOST_EMAIL = "bhaiofficial123@gmail.com";
+
 async function main() {
-  await prisma.employee.upsert({
+  await prisma.employee.deleteMany({
     where: { email: "priya.sharma@company.com" },
+  });
+
+  await prisma.employee.upsert({
+    where: { email: HOST_EMAIL },
     update: {
       fullName: "Priya Sharma",
       department: "Engineering",
@@ -21,7 +27,7 @@ async function main() {
     },
     create: {
       fullName: "Priya Sharma",
-      email: "priya.sharma@company.com",
+      email: HOST_EMAIL,
       password: "password",
       department: "Engineering",
       phone: "9876543210",

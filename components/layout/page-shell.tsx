@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeader } from "@/components/layout/site-header";
 import { cn } from "@/lib/utils";
 
 type PageShellProps = {

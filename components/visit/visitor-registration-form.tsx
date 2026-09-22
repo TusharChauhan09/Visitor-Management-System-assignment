@@ -1,24 +1,11 @@
 "use client";
 
 import { useActionState } from "react";
-import { PhotoCapture } from "@/components/photo-capture";
+import { createVisitorEntry } from "@/app/actions/visits";
+import { PhotoCapture } from "@/components/visit/photo-capture";
 import { Button } from "@/components/ui/button";
-import { createVisitorEntry, type ActionState } from "@/app/actions/visits";
-
-type EmployeeOption = {
-  id: string;
-  fullName: string;
-  department: string;
-};
-
-const PURPOSE_OPTIONS = [
-  "Meeting with an employee",
-  "Interview",
-  "Maintenance work",
-  "Delivery",
-  "Vendor visit",
-  "Other",
-];
+import type { ActionState, EmployeeOption } from "@/lib/types";
+import { VISIT_PURPOSE_OPTIONS } from "@/lib/visits/constants";
 
 const fieldClass =
   "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -98,7 +85,7 @@ export function VisitorRegistrationForm({
             <option value="" disabled>
               Select a purpose
             </option>
-            {PURPOSE_OPTIONS.map((option) => (
+            {VISIT_PURPOSE_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>

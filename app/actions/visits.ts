@@ -1,12 +1,14 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { saveVisitorPhoto } from "@/lib/photos";
-import { prisma } from "@/lib/prisma";
+import { sendHostApprovalEmail } from "@/lib/email/host-approval";
+import { saveVisitorPhoto } from "@/lib/visitors/photos";
+import { prisma } from "@/lib/db/prisma";
+import { checkInVisit } from "@/lib/visits/check-in";
+import type { ActionState } from "@/lib/types";
 
-export type ActionState = {
-  error?: string;
-};
+export type { ActionState };
 
 function requiredString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -54,6 +56,9 @@ export async function createVisitorEntry(
     };
   }
 
+  const approvalToken = randomUUID();
+  const requestedAt = new Date();
+
   const visitor = await prisma.visitor.create({
     data: { fullName, email, phone, company },
   });
@@ -63,9 +68,23 @@ export async function createVisitorEntry(
       purpose,
       photoUrl,
       preApproved: false,
+      approvalToken,
       visitorId: visitor.id,
       hostId: host.id,
     },
+  });
+
+  await sendHostApprovalEmail({
+    hostEmail: host.email,
+    hostName: host.fullName,
+    visitorName: fullName,
+    visitorEmail: email,
+    visitorPhone: phone,
+    company,
+    purpose,
+    photoUrl,
+    requestedAt,
+    approvalToken,
   });
 
   redirect(`/entry/status/${visit.id}`);
@@ -88,78 +107,13 @@ export async function checkInByPassCode(
   redirect(`/entry/status/${result.visitId}`);
 }
 
-export async function checkInByScannedCode(code: string): Promise<ActionState> {
+export async function checkInByScannedCode(
+  code: string
+): Promise<{ visitId?: string; error?: string }> {
   const trimmed = code.trim();
   if (!trimmed) {
     return { error: "No QR code was read. Try again." };
   }
 
-  const result = await checkInVisit(trimmed);
-  if ("error" in result) {
-    return { error: result.error };
-  }
-
-  redirect(`/entry/status/${result.visitId}`);
-}
-
-async function checkInVisit(code: string) {
-  const visit = await prisma.visit.findUnique({
-    where: { qrCode: code },
-  });
-
-  if (!visit) {
-    return { error: "This pass was not found. Ask security for help." };
-  }
-
-  if (visit.status === "REJECTED") {
-    return {
-      error: "Access was denied. Security has been asked to assist at the desk.",
-    };
-  }
-
-  if (visit.status === "PENDING") {
-    return {
-      error: "This visit is still waiting for host approval. A pass is issued after approval.",
-    };
-  }
-
-  if (visit.status === "EXPIRED") {
-    return { error: "This pass has expired. Register again at the desk." };
-  }
-
-  if (visit.status === "CHECKED_OUT" || visit.status === "OVERSTAY") {
-    return { error: "This visit is already closed." };
-  }
-
-  if (visit.status === "CHECKED_IN") {
-    return { visitId: visit.id };
-  }
-
-  if (visit.preApproved && visit.windowStart && visit.windowEnd) {
-    const now = new Date();
-    if (now < visit.windowStart) {
-      return { error: "This pass is not valid yet. Come back in the approved window." };
-    }
-    if (now > visit.windowEnd) {
-      await prisma.visit.update({
-        where: { id: visit.id },
-        data: { status: "EXPIRED" },
-      });
-      return { error: "The approved time window has passed. This pass has expired." };
-    }
-  }
-
-  if (visit.status !== "APPROVED") {
-    return { error: "This pass cannot be used for entry right now." };
-  }
-
-  await prisma.visit.update({
-    where: { id: visit.id },
-    data: {
-      status: "CHECKED_IN",
-      checkInAt: visit.checkInAt ?? new Date(),
-    },
-  });
-
-  return { visitId: visit.id };
+  return checkInVisit(trimmed);
 }

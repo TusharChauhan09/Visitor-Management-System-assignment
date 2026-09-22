@@ -71,7 +71,8 @@ model Visit {
   windowStart DateTime?
   windowEnd   DateTime?
 
-  qrCode String? @unique
+  qrCode         String? @unique
+  approvalToken  String? @unique
 
   visitorId String
   visitor   Visitor  @relation(fields: [visitorId], references: [id])

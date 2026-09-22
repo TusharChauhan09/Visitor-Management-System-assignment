@@ -1,7 +1,8 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/components/page-shell";
-import { prisma } from "@/lib/prisma";
+import { PageShell } from "@/components/layout/page-shell";
+import { VisitPassDisplay } from "@/components/visit/visit-pass-display";
+import { prisma } from "@/lib/db/prisma";
 
 const STATUS_COPY: Record<
   string,
@@ -9,7 +10,7 @@ const STATUS_COPY: Record<
 > = {
   PENDING: {
     title: "Waiting for host approval",
-    body: "Your details are saved. A pass is generated after the host approves. Notifications to the host will be added next.",
+    body: "Your details are saved. The host was emailed a link to approve or deny. A QR pass appears here after approval.",
   },
   APPROVED: {
     title: "Approved",
@@ -77,6 +78,10 @@ export default async function VisitStatusPage({
               className="aspect-[4/3] w-full object-cover"
             />
           </div>
+        ) : null}
+
+        {visit.qrCode && (visit.status === "APPROVED" || visit.status === "CHECKED_IN") ? (
+          <VisitPassDisplay qrCode={visit.qrCode} />
         ) : null}
 
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
