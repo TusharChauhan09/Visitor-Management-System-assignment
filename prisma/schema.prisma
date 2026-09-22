@@ -11,3 +11,70 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum VisitStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CHECKED_IN
+  CHECKED_OUT
+  EXPIRED
+  OVERSTAY
+}
+
+model Admin {
+  id                String @id @default(cuid())
+  email             String @unique
+  password          String
+  maxVisitorsPerDay Int    @default(10)
+}
+
+model Security {
+  id       String @id @default(cuid())
+  email    String @unique
+  password String
+}
+
+model Employee {
+  id         String @id @default(cuid())
+  fullName   String
+  email      String @unique
+  password   String
+  department String
+  phone      String
+
+  visits Visit[]
+}
+
+model Visitor {
+  id       String @id @default(cuid())
+  fullName String
+  email    String
+  phone    String
+  company  String?
+
+  visits Visit[]
+}
+
+model Visit {
+  id     String      @id @default(cuid())
+  status VisitStatus @default(PENDING)
+
+  purpose  String
+  photoUrl String?
+
+  checkInAt  DateTime?
+  checkOutAt DateTime?
+
+  // true = employee pre-approved this visit || false = walk-in at desk
+  preApproved Boolean   @default(false)
+  windowStart DateTime?
+  windowEnd   DateTime?
+
+  qrCode String? @unique
+
+  visitorId String
+  visitor   Visitor  @relation(fields: [visitorId], references: [id])
+  hostId    String
+  host      Employee @relation(fields: [hostId], references: [id])
+}
