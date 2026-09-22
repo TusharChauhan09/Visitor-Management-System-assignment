@@ -4,7 +4,11 @@ import { useActionState, useState } from "react";
 import { createVisitorEntry } from "@/app/actions/visits";
 import { PhotoCapture } from "@/components/visit/photo-capture";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { fieldClass } from "@/lib/form";
+import { cn } from "@/lib/utils";
 import type { ActionState, EmployeeOption } from "@/lib/types";
 import { VISIT_PURPOSE_OPTIONS } from "@/lib/visits/constants";
 import {
@@ -33,7 +37,7 @@ export function VisitorRegistrationForm({
   }
 
   return (
-    <form action={formAction} className="max-w-2xl space-y-8">
+    <form action={formAction} className="max-w-2xl space-y-6">
       <input type="hidden" name="photoData" value={photoData} />
 
       {state.error ? (
@@ -45,80 +49,102 @@ export function VisitorRegistrationForm({
         </p>
       ) : null}
 
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold tracking-tight">Visitor details</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-1.5 sm:col-span-2">
-            <span className="text-sm font-medium">Full name</span>
-            <input name="fullName" autoComplete="name" required className={fieldClass} />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium">Email</span>
-            <input name="email" type="email" autoComplete="email" required className={fieldClass} />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium">Mobile number</span>
-            <input name="phone" type="tel" autoComplete="tel" required className={fieldClass} />
-          </label>
-          <label className="space-y-1.5 sm:col-span-2">
-            <span className="text-sm font-medium">Company (optional)</span>
-            <input name="company" className={fieldClass} />
-          </label>
-        </div>
-      </section>
+      <Card className="bg-card/90 shadow-none">
+        <CardHeader>
+          <CardTitle className="text-base">Visitor details</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="v-name">Full name</Label>
+            <Input id="v-name" name="fullName" autoComplete="name" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="v-email">Email</Label>
+            <Input id="v-email" name="email" type="email" autoComplete="email" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="v-phone">Mobile number</Label>
+            <Input id="v-phone" name="phone" type="tel" autoComplete="tel" required />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="v-company">Company (optional)</Label>
+            <Input id="v-company" name="company" />
+          </div>
+        </CardContent>
+      </Card>
 
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold tracking-tight">Visit</h2>
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Purpose</span>
-          <select name="purpose" required defaultValue="" className={fieldClass}>
-            <option value="" disabled>Select a purpose</option>
-            {VISIT_PURPOSE_OPTIONS.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium">Visit from</span>
-            <input
-              type="datetime-local"
-              name="visitFrom"
+      <Card className="bg-card/90 shadow-none">
+        <CardHeader>
+          <CardTitle className="text-base">Visit</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="v-purpose">Purpose</Label>
+            <select
+              id="v-purpose"
+              name="purpose"
               required
-              defaultValue={defaultVisitFromValue()}
-              className={fieldClass}
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium">Visit to</span>
-            <input
-              type="datetime-local"
-              name="visitTo"
+              defaultValue=""
+              className={cn(fieldClass, "h-8 px-2.5")}
+            >
+              <option value="" disabled>Select a purpose</option>
+              {VISIT_PURPOSE_OPTIONS.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="v-from">Visit from</Label>
+              <Input
+                id="v-from"
+                type="datetime-local"
+                name="visitFrom"
+                required
+                defaultValue={defaultVisitFromValue()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="v-to">Visit to</Label>
+              <Input
+                id="v-to"
+                type="datetime-local"
+                name="visitTo"
+                required
+                defaultValue={defaultVisitToValue()}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="v-host">Host employee</Label>
+            <select
+              id="v-host"
+              name="hostId"
               required
-              defaultValue={defaultVisitToValue()}
-              className={fieldClass}
-            />
-          </label>
-        </div>
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Host employee</span>
-          <select name="hostId" required defaultValue="" className={fieldClass}>
-            <option value="" disabled>Select name and department</option>
-            {employees.map((employee) => (
-              <option key={employee.id} value={employee.id}>
-                {employee.fullName} — {employee.department}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
+              defaultValue=""
+              className={cn(fieldClass, "h-8 px-2.5")}
+            >
+              <option value="" disabled>Select name and department</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.fullName} — {employee.department}
+                </option>
+              ))}
+            </select>
+          </div>
+        </CardContent>
+      </Card>
 
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold tracking-tight">Photo</h2>
-        <div className="max-w-sm">
-          <PhotoCapture onPhotoChange={setHasPhoto} onCapture={setPhotoData} />
-        </div>
-      </section>
+      <Card className="bg-card/90 shadow-none">
+        <CardHeader>
+          <CardTitle className="text-base">Photo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="max-w-sm">
+            <PhotoCapture onPhotoChange={setHasPhoto} onCapture={setPhotoData} />
+          </div>
+        </CardContent>
+      </Card>
 
       <Button
         type="submit"

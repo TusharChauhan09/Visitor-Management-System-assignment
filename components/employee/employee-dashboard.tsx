@@ -6,12 +6,16 @@ import { approvePendingVisit, denyPendingVisit } from "@/app/actions/employee";
 import { logoutEmployee } from "@/app/actions/auth";
 import type { VisitLogEntry } from "@/lib/types";
 import { StatCards } from "@/components/dashboard/stat-cards";
+import { StatusOverview } from "@/components/dashboard/status-overview";
+import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { VisitLogTable } from "@/components/dashboard/visit-log-table";
 import { VisitDetailPanel } from "@/components/dashboard/visit-detail-panel";
 import { PreInviteForm } from "@/components/employee/pre-invite-form";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type EmployeeDashboardProps = {
   employeeName: string;
@@ -51,10 +55,7 @@ export function EmployeeDashboard({
     { label: "Checked in", value: statusCounts.CHECKED_IN ?? 0 },
   ];
 
-  function runVisitAction(
-    visitId: string,
-    action: "approve" | "deny"
-  ) {
+  function runVisitAction(visitId: string, action: "approve" | "deny") {
     setActionError("");
     startTransition(async () => {
       const result =
@@ -71,47 +72,82 @@ export function EmployeeDashboard({
     });
   }
 
+  const headerActions = (
+    <>
+      <NotificationBell
+        count={pendingVisits.length}
+        label="Visitor approval requests"
+        onClick={() => {
+          setActivePending(pendingVisits[0] ?? null);
+          setNotifyOpen(true);
+        }}
+      />
+      <form action={logoutEmployee}>
+        <Button type="submit" variant="outline" size="sm">Sign out</Button>
+      </form>
+    </>
+  );
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="text-sm text-muted-foreground">
-          <p className="text-lg font-semibold text-foreground">{employeeName}</p>
-          <p>{department} · {email}</p>
-          <p className="mt-1">Daily pre-invite limit: {maxVisitorsPerDay}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell
-            count={pendingVisits.length}
-            label="Visitor approval requests"
-            onClick={() => {
-              setActivePending(pendingVisits[0] ?? null);
-              setNotifyOpen(true);
-            }}
-          />
-          <form action={logoutEmployee}>
-            <Button type="submit" variant="outline" size="sm">Sign out</Button>
-          </form>
-        </div>
-      </div>
-
-      {inviteUrl ? (
-        <p className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
-          Pre-invite link:{" "}
-          <a className="break-all font-medium text-foreground underline" href={inviteUrl}>
-            {inviteUrl}
-          </a>
-        </p>
-      ) : null}
-
-      <StatCards stats={stats} />
-
-      <PreInviteForm remainingToday={remainingToday} />
-
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold">Visitor log</h2>
-        <p className="text-sm text-muted-foreground">Click a row for details.</p>
-        <VisitLogTable visits={visits} showHost={false} />
-      </section>
+    <>
+      <DashboardFrame
+        title={employeeName}
+        description={`${department} · ${email}`}
+        actions={headerActions}
+        defaultTab="overview"
+        tabs={[
+          {
+            value: "overview",
+            label: "Overview",
+            badge: pendingVisits.length > 0 ? pendingVisits.length : undefined,
+            content: (
+              <div className="space-y-6 pb-4">
+                <Card className="bg-card/80 shadow-none">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Today&apos;s pre-invites</CardTitle>
+                    <CardDescription>
+                      {remainingToday} of {maxVisitorsPerDay} slots left for scheduled visitors.
+                    </CardDescription>
+                  </CardHeader>
+                  {inviteUrl ? (
+                    <CardContent>
+                      <p className="text-xs text-muted-foreground">Latest check-in link</p>
+                      <a
+                        className="mt-1 block break-all text-sm font-medium text-primary underline-offset-4 hover:underline"
+                        href={inviteUrl}
+                      >
+                        {inviteUrl}
+                      </a>
+                    </CardContent>
+                  ) : null}
+                </Card>
+                <StatCards stats={stats} />
+                <StatusOverview statusCounts={statusCounts} />
+              </div>
+            ),
+          },
+          {
+            value: "invite",
+            label: "Pre-invite",
+            content: (
+              <div className="pb-4">
+                <PreInviteForm remainingToday={remainingToday} />
+              </div>
+            ),
+          },
+          {
+            value: "visitors",
+            label: "Visitor log",
+            badge: visits.length,
+            content: (
+              <div className="space-y-3 pb-4">
+                <p className="text-sm text-muted-foreground">Tap a row for visit details.</p>
+                <VisitLogTable visits={visits} showHost={false} />
+              </div>
+            ),
+          },
+        ]}
+      />
 
       <Modal
         open={notifyOpen}
@@ -126,23 +162,22 @@ export function EmployeeDashboard({
             {actionError ? (
               <p className="text-sm text-destructive">{actionError}</p>
             ) : null}
-            <ul className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
               {pendingVisits.map((visit) => (
-                <li key={visit.id}>
-                  <button
-                    type="button"
-                    onClick={() => setActivePending(visit)}
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${
-                      activePending?.id === visit.id
-                        ? "bg-foreground text-background"
-                        : "bg-muted text-muted-foreground"
-                    }`}
+                <button
+                  key={visit.id}
+                  type="button"
+                  onClick={() => setActivePending(visit)}
+                >
+                  <Badge
+                    variant={activePending?.id === visit.id ? "default" : "secondary"}
+                    className="cursor-pointer px-3 py-1 text-xs"
                   >
                     {visit.visitor.fullName}
-                  </button>
-                </li>
+                  </Badge>
+                </button>
               ))}
-            </ul>
+            </div>
             {activePending ? (
               <>
                 <VisitDetailPanel visit={activePending} />
@@ -170,6 +205,6 @@ export function EmployeeDashboard({
           </div>
         )}
       </Modal>
-    </div>
+    </>
   );
 }

@@ -71,7 +71,7 @@ export default async function AdminPage() {
     }));
 
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-background">
+    <div className="flex min-h-full flex-1 flex-col bg-background app-mesh-bg">
       <SiteHeader
         trailing={
           <Link

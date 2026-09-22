@@ -6,12 +6,14 @@ import { approveEmployeeForm, rejectEmployeeForm } from "@/app/actions/admin";
 import { logoutAdmin } from "@/app/actions/auth";
 import { EmployeeDirectory } from "@/components/admin/employee-directory";
 import type { AdminEmployeeEntry, PendingEmployeeEntry, VisitLogEntry } from "@/lib/types";
-import { visitStatusLabel } from "@/lib/visits/status";
 import { StatCards } from "@/components/dashboard/stat-cards";
+import { StatusOverview } from "@/components/dashboard/status-overview";
+import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { VisitLogTable } from "@/components/dashboard/visit-log-table";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 type AdminDashboardProps = {
   visits: VisitLogEntry[];
@@ -40,53 +42,65 @@ export function AdminDashboard({
     { label: "Access requests", value: pendingEmployees.length },
   ];
 
+  const headerActions = (
+    <>
+      <NotificationBell
+        count={pendingEmployees.length}
+        label="Employee access requests"
+        onClick={() => setNotifyOpen(true)}
+      />
+      <form action={logoutAdmin}>
+        <Button type="submit" variant="outline" size="sm">Sign out</Button>
+      </form>
+    </>
+  );
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Admin dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Visitor logs, statuses, and employee access requests.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell
-            count={pendingEmployees.length}
-            label="Employee access requests"
-            onClick={() => setNotifyOpen(true)}
-          />
-          <form action={logoutAdmin}>
-            <Button type="submit" variant="outline" size="sm">Sign out</Button>
-          </form>
-        </div>
-      </div>
-
-      <StatCards stats={stats} />
-
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold">Status overview</h2>
-        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-          {Object.entries(statusCounts).map(([status, count]) => (
-            <span key={status} className="rounded-lg border border-border px-3 py-1.5">
-              {visitStatusLabel(status)}: <strong className="text-foreground">{count}</strong>
-            </span>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold">Employees</h2>
-        <p className="text-sm text-muted-foreground">
-          All registered hosts. Click a row for full profile and visit stats.
-        </p>
-        <EmployeeDirectory employees={employees} />
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold">Visitor logs</h2>
-        <p className="text-sm text-muted-foreground">Click a row for full visitor and host details.</p>
-        <VisitLogTable visits={visits} showHost />
-      </section>
+    <>
+      <DashboardFrame
+        title="Admin dashboard"
+        description="Visitor logs, host directory, and access requests in one place."
+        actions={headerActions}
+        defaultTab="overview"
+        tabs={[
+          {
+            value: "overview",
+            label: "Overview",
+            content: (
+              <div className="space-y-6 pb-4">
+                <StatCards stats={stats} />
+                <StatusOverview statusCounts={statusCounts} />
+              </div>
+            ),
+          },
+          {
+            value: "visitors",
+            label: "Visitor logs",
+            badge: visits.length,
+            content: (
+              <div className="space-y-3 pb-4">
+                <p className="text-sm text-muted-foreground">
+                  Select a row to open full visitor and host details.
+                </p>
+                <VisitLogTable visits={visits} showHost />
+              </div>
+            ),
+          },
+          {
+            value: "employees",
+            label: "Employees",
+            badge: employees.length,
+            content: (
+              <div className="space-y-3 pb-4">
+                <p className="text-sm text-muted-foreground">
+                  Registered hosts. Pending accounts need your approval.
+                </p>
+                <EmployeeDirectory employees={employees} />
+              </div>
+            ),
+          },
+        ]}
+      />
 
       <Modal
         open={notifyOpen}
@@ -104,7 +118,7 @@ export function AdminDashboard({
             {pendingEmployees.map((employee) => (
               <li
                 key={employee.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-4"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/20 p-4"
               >
                 <button
                   type="button"
@@ -165,6 +179,7 @@ export function AdminDashboard({
                 <dd>{selectedEmployee.phone}</dd>
               </div>
             </dl>
+            <Separator />
             <div className="flex gap-2 pt-2">
               <form action={approveEmployeeForm}>
                 <input type="hidden" name="employeeId" value={selectedEmployee.id} />
@@ -178,6 +193,6 @@ export function AdminDashboard({
           </div>
         ) : null}
       </Modal>
-    </div>
+    </>
   );
 }
