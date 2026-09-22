@@ -15,6 +15,7 @@ export async function approveEmployeeForm(formData: FormData) {
     data: { isApproved: true },
   });
   revalidatePath("/admin");
+  revalidatePath("/employee");
 }
 
 export async function rejectEmployeeForm(formData: FormData) {
@@ -25,4 +26,5 @@ export async function rejectEmployeeForm(formData: FormData) {
   }
   await prisma.employee.delete({ where: { id } });
   revalidatePath("/admin");
+  revalidatePath("/employee");
 }

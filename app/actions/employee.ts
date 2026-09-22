@@ -10,6 +10,7 @@ import {
   parseVisitWindow,
   startOfLocalDay,
 } from "@/lib/visits/visit-window";
+import { approveVisitByToken, denyVisitByToken } from "@/lib/visits/approval";
 import { prisma } from "@/lib/db/prisma";
 import type { ActionState } from "@/lib/types";
 
@@ -79,4 +80,38 @@ export async function createPreInvite(
 
   revalidatePath("/employee");
   redirect(`/employee?invited=${visit.id}`);
+}
+
+export async function approvePendingVisit(visitId: string) {
+  const employee = await requireEmployee();
+  const visit = await prisma.visit.findFirst({
+    where: { id: visitId, hostId: employee.id, status: "PENDING" },
+  });
+  if (!visit?.approvalToken) {
+    return { error: "This request is no longer pending." };
+  }
+  const result = await approveVisitByToken(visit.approvalToken);
+  if ("error" in result) {
+    return { error: result.error };
+  }
+  revalidatePath("/employee");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+export async function denyPendingVisit(visitId: string) {
+  const employee = await requireEmployee();
+  const visit = await prisma.visit.findFirst({
+    where: { id: visitId, hostId: employee.id, status: "PENDING" },
+  });
+  if (!visit?.approvalToken) {
+    return { error: "This request is no longer pending." };
+  }
+  const result = await denyVisitByToken(visit.approvalToken);
+  if ("error" in result) {
+    return { error: result.error };
+  }
+  revalidatePath("/employee");
+  revalidatePath("/admin");
+  return { ok: true };
 }

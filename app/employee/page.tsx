@@ -1,14 +1,12 @@
-import { PageShell } from "@/components/layout/page-shell";
-import { PreInviteForm } from "@/components/employee/pre-invite-form";
-import { VisitorStatusTable } from "@/components/employee/visitor-status-table";
-import { logoutEmployee } from "@/app/actions/auth";
+import { EmployeeDashboard } from "@/components/employee/employee-dashboard";
+import { SiteHeader } from "@/components/layout/site-header";
 import { requireEmployee } from "@/lib/auth/guards";
 import { buildCheckInUrl } from "@/lib/visits/pass-code";
-import { toEmployeeVisitRows } from "@/lib/visits/employee-dashboard";
+import { countByStatus, serializeVisitLog } from "@/lib/visits/visit-log";
 import { endOfLocalDay, startOfLocalDay } from "@/lib/visits/visit-window";
 import { getAppUrl } from "@/lib/config/app-url";
 import { prisma } from "@/lib/db/prisma";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function EmployeeDashboardPage({
   searchParams,
@@ -20,7 +18,10 @@ export default async function EmployeeDashboardPage({
 
   const visits = await prisma.visit.findMany({
     where: { hostId: employee.id },
-    include: { visitor: true },
+    include: {
+      visitor: true,
+      host: true,
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -32,6 +33,9 @@ export default async function EmployeeDashboardPage({
     },
   });
 
+  const serialized = visits.map(serializeVisitLog);
+  const pendingVisits = serialized.filter((v) => v.status === "PENDING");
+
   const latestInvite = invited
     ? visits.find((v) => v.id === invited && v.qrCode)
     : null;
@@ -40,36 +44,30 @@ export default async function EmployeeDashboardPage({
     : null;
 
   return (
-    <PageShell title="Employee portal">
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div className="text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">{employee.fullName}</p>
-          <p>{employee.department} · {employee.email}</p>
-          <p className="mt-1">Daily pre-invite limit: {employee.maxVisitorsPerDay}</p>
-        </div>
-        <form action={logoutEmployee}>
-          <Button type="submit" variant="outline" size="sm">Sign out</Button>
-        </form>
-      </div>
-
-      {inviteUrl ? (
-        <p className="mb-6 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
-          Pre-invite created. Share check-in link:{" "}
-          <a className="break-all font-medium text-foreground underline" href={inviteUrl}>
-            {inviteUrl}
-          </a>
-        </p>
-      ) : null}
-
-      <div className="space-y-10">
-        <PreInviteForm
+    <div className="flex min-h-full flex-1 flex-col bg-background">
+      <SiteHeader
+        trailing={
+          <Link
+            href="/"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Desk
+          </Link>
+        }
+      />
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8 lg:py-10">
+        <EmployeeDashboard
+          employeeName={employee.fullName}
+          department={employee.department}
+          email={employee.email}
+          maxVisitorsPerDay={employee.maxVisitorsPerDay}
           remainingToday={Math.max(0, employee.maxVisitorsPerDay - todayInvites)}
+          inviteUrl={inviteUrl}
+          visits={serialized}
+          pendingVisits={pendingVisits}
+          statusCounts={countByStatus(visits)}
         />
-        <section className="space-y-3">
-          <h2 className="text-base font-semibold">Your visitors</h2>
-          <VisitorStatusTable visits={toEmployeeVisitRows(visits)} />
-        </section>
-      </div>
-    </PageShell>
+      </main>
+    </div>
   );
 }

@@ -1,73 +1,95 @@
-import { PageShell } from "@/components/layout/page-shell";
-import { approveEmployeeForm, rejectEmployeeForm } from "@/app/actions/admin";
-import { logoutAdmin } from "@/app/actions/auth";
+import { AdminDashboard } from "@/components/admin/admin-dashboard";
+import { SiteHeader } from "@/components/layout/site-header";
 import { requireAdmin } from "@/lib/auth/guards";
+import type { AdminEmployeeEntry } from "@/lib/types";
+import { countByStatus, serializeVisitLog } from "@/lib/visits/visit-log";
 import { prisma } from "@/lib/db/prisma";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+function toAdminEmployee(
+  employee: {
+    id: string;
+    fullName: string;
+    email: string;
+    department: string;
+    phone: string;
+    isApproved: boolean;
+    maxVisitorsPerDay: number;
+    visits: { status: string }[];
+  }
+): AdminEmployeeEntry {
+  const totalVisits = employee.visits.length;
+  const pendingVisits = employee.visits.filter((v) => v.status === "PENDING").length;
+  const checkedInVisits = employee.visits.filter((v) => v.status === "CHECKED_IN").length;
+
+  return {
+    id: employee.id,
+    fullName: employee.fullName,
+    email: employee.email,
+    department: employee.department,
+    phone: employee.phone,
+    isApproved: employee.isApproved,
+    maxVisitorsPerDay: employee.maxVisitorsPerDay,
+    totalVisits,
+    pendingVisits,
+    checkedInVisits,
+  };
+}
 
 export default async function AdminPage() {
   await requireAdmin();
 
-  const [pending, approved] = await Promise.all([
-    prisma.employee.findMany({
-      where: { isApproved: false },
-      orderBy: { fullName: "asc" },
+  const [visits, employees] = await Promise.all([
+    prisma.visit.findMany({
+      include: { visitor: true, host: true },
+      orderBy: { createdAt: "desc" },
     }),
     prisma.employee.findMany({
-      where: { isApproved: true },
       orderBy: { fullName: "asc" },
-      take: 20,
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        department: true,
+        phone: true,
+        isApproved: true,
+        maxVisitorsPerDay: true,
+        visits: { select: { status: true } },
+      },
     }),
   ]);
 
+  const employeeRows = employees.map(toAdminEmployee);
+  const pendingEmployees = employeeRows
+    .filter((e) => !e.isApproved)
+    .map(({ id, fullName, email, department, phone }) => ({
+      id,
+      fullName,
+      email,
+      department,
+      phone,
+    }));
+
   return (
-    <PageShell title="Admin — employee approvals">
-      <form action={logoutAdmin} className="mb-8">
-        <Button type="submit" variant="outline" size="sm">Sign out</Button>
-      </form>
-
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold">Pending registration</h2>
-        {pending.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No employees waiting for approval.</p>
-        ) : (
-          <ul className="space-y-3">
-            {pending.map((employee) => (
-              <li
-                key={employee.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4"
-              >
-                <div className="text-sm">
-                  <p className="font-medium">{employee.fullName}</p>
-                  <p className="text-muted-foreground">{employee.email}</p>
-                  <p className="text-muted-foreground">{employee.department} · {employee.phone}</p>
-                </div>
-                <div className="flex gap-2">
-                  <form action={approveEmployeeForm}>
-                    <input type="hidden" name="employeeId" value={employee.id} />
-                    <Button type="submit" size="sm">Approve</Button>
-                  </form>
-                  <form action={rejectEmployeeForm}>
-                    <input type="hidden" name="employeeId" value={employee.id} />
-                    <Button type="submit" size="sm" variant="outline">Reject</Button>
-                  </form>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="mt-10 space-y-3">
-        <h2 className="text-base font-semibold">Approved employees</h2>
-        <ul className="space-y-2 text-sm text-muted-foreground">
-          {approved.map((e) => (
-            <li key={e.id}>
-              {e.fullName} — {e.email} (max {e.maxVisitorsPerDay} pre-invites/day)
-            </li>
-          ))}
-        </ul>
-      </section>
-    </PageShell>
+    <div className="flex min-h-full flex-1 flex-col bg-background">
+      <SiteHeader
+        trailing={
+          <Link
+            href="/"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Desk
+          </Link>
+        }
+      />
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8 lg:py-10">
+        <AdminDashboard
+          visits={visits.map(serializeVisitLog)}
+          employees={employeeRows}
+          pendingEmployees={pendingEmployees}
+          statusCounts={countByStatus(visits)}
+        />
+      </main>
+    </div>
   );
 }

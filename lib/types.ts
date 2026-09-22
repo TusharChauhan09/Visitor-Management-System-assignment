@@ -21,19 +21,48 @@ export type HostApprovalEmailInput = {
   approvalToken: string;
 };
 
-export type EmployeeVisitRow = {
+export type VisitLogEntry = {
   id: string;
   status: string;
   purpose: string;
   preApproved: boolean;
-  windowStart: Date | null;
-  windowEnd: Date | null;
-  checkInAt: Date | null;
+  photoUrl: string | null;
+  windowStart: string | null;
+  windowEnd: string | null;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  createdAt: string;
   visitor: {
     fullName: string;
     email: string;
     phone: string;
     company: string | null;
   };
-  visitedBefore: boolean;
+  host: {
+    fullName: string;
+    email: string;
+    department: string;
+    phone: string;
+  };
+};
+
+export type PendingEmployeeEntry = {
+  id: string;
+  fullName: string;
+  email: string;
+  department: string;
+  phone: string;
+};
+
+export type AdminEmployeeEntry = {
+  id: string;
+  fullName: string;
+  email: string;
+  department: string;
+  phone: string;
+  isApproved: boolean;
+  maxVisitorsPerDay: number;
+  totalVisits: number;
+  pendingVisits: number;
+  checkedInVisits: number;
 };
