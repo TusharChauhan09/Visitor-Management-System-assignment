@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { approveEmployeeForm, rejectEmployeeForm } from "@/app/actions/admin";
-import { logout } from "@/app/actions/auth";
 import { EmployeeDirectory, type Host } from "@/components/admin/employee-directory";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import type { VisitRow } from "@/lib/visits";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { VisitLogTable } from "@/components/dashboard/visit-log-table";
+import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 
@@ -27,10 +27,13 @@ export function AdminDashboard({
   statusCounts,
 }: AdminDashboardProps) {
   const router = useRouter();
-  const [notifyOpen, setNotifyOpen] = useState(pendingEmployees.length > 0);
-  const [selectedEmployee, setSelectedEmployee] = useState<Host | null>(
-    null
-  );
+  const {
+    notifyOpen,
+    selectedEmployee,
+    openNotifications,
+    closeNotifications,
+    setSelectedEmployeeId,
+  } = useAdminDashboard(pendingEmployees);
 
   const stats = [
     { label: "Total visits", value: visits.length },
@@ -45,11 +48,9 @@ export function AdminDashboard({
       <NotificationBell
         count={pendingEmployees.length}
         label="Employee access requests"
-        onClick={() => setNotifyOpen(true)}
+        onClick={openNotifications}
       />
-      <form action={logout}>
-        <Button type="submit" variant="outline" size="sm">Sign out</Button>
-      </form>
+      <SignOutButton />
     </>
   );
 
@@ -84,10 +85,7 @@ export function AdminDashboard({
       <Modal
         open={notifyOpen}
         title="Employee access requests"
-        onClose={() => {
-          setNotifyOpen(false);
-          setSelectedEmployee(null);
-        }}
+        onClose={closeNotifications}
         wide
       >
         {pendingEmployees.length === 0 ? (
@@ -102,7 +100,7 @@ export function AdminDashboard({
                 <button
                   type="button"
                   className="text-left text-sm hover:underline"
-                  onClick={() => setSelectedEmployee(employee)}
+                  onClick={() => setSelectedEmployeeId(employee.id)}
                 >
                   <p className="font-medium text-foreground">{employee.fullName}</p>
                   <p className="text-muted-foreground">{employee.email}</p>
@@ -115,7 +113,9 @@ export function AdminDashboard({
                     }}
                   >
                     <input type="hidden" name="employeeId" value={employee.id} />
-                    <Button type="submit" size="sm">Approve</Button>
+                    <Button type="submit" size="sm">
+                      Approve
+                    </Button>
                   </form>
                   <form
                     action={rejectEmployeeForm}
@@ -124,7 +124,9 @@ export function AdminDashboard({
                     }}
                   >
                     <input type="hidden" name="employeeId" value={employee.id} />
-                    <Button type="submit" size="sm" variant="outline">Decline</Button>
+                    <Button type="submit" size="sm" variant="outline">
+                      Decline
+                    </Button>
                   </form>
                 </div>
               </li>
@@ -136,7 +138,7 @@ export function AdminDashboard({
       <Modal
         open={selectedEmployee !== null}
         title="Employee registration"
-        onClose={() => setSelectedEmployee(null)}
+        onClose={() => setSelectedEmployeeId(null)}
       >
         {selectedEmployee ? (
           <div className="space-y-4 text-sm">
@@ -162,11 +164,15 @@ export function AdminDashboard({
             <div className="flex gap-2 pt-2">
               <form action={approveEmployeeForm}>
                 <input type="hidden" name="employeeId" value={selectedEmployee.id} />
-                <Button type="submit" size="sm">Approve access</Button>
+                <Button type="submit" size="sm">
+                  Approve access
+                </Button>
               </form>
               <form action={rejectEmployeeForm}>
                 <input type="hidden" name="employeeId" value={selectedEmployee.id} />
-                <Button type="submit" size="sm" variant="outline">Decline</Button>
+                <Button type="submit" size="sm" variant="outline">
+                  Decline
+                </Button>
               </form>
             </div>
           </div>

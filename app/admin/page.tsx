@@ -1,6 +1,7 @@
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import type { Host } from "@/components/admin/employee-directory";
 import { DeskHomeLink, DeskLayout } from "@/components/layout/desk-layout";
+import { AuthHydrator } from "@/components/providers/auth-hydrator";
 import { requireAdmin } from "@/lib/auth/guards";
 import { countByStatus, serializeVisit } from "@/lib/visits";
 import { prisma } from "@/lib/db/prisma";
@@ -30,7 +31,7 @@ function toHost(employee: {
 }
 
 export default async function AdminPage() {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const [visits, employees] = await Promise.all([
     prisma.visit.findMany({
@@ -57,6 +58,7 @@ export default async function AdminPage() {
 
   return (
     <DeskLayout trailing={<DeskHomeLink />}>
+      <AuthHydrator user={{ role: "admin", id: admin.id, email: admin.email }} />
       <AdminDashboard
         visits={visits.map(serializeVisit)}
         employees={employeeRows}

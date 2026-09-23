@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireEmployee } from "@/lib/auth/guards";
 import { endOfDay, parseWindow, startOfDay } from "@/lib/visits";
-import { approveVisitByToken, denyVisitByToken } from "@/lib/visits-db";
+import { approveVisitByToken, denyVisitByToken } from "@/lib/visits/db";
 import { saveVisitorPhoto } from "@/lib/visitors/photos";
 import { prisma } from "@/lib/db/prisma";
 

@@ -1,5 +1,6 @@
 import { EmployeeDashboard } from "@/components/employee/employee-dashboard";
 import { DeskHomeLink, DeskLayout } from "@/components/layout/desk-layout";
+import { AuthHydrator } from "@/components/providers/auth-hydrator";
 import { requireEmployee } from "@/lib/auth/guards";
 import { checkInUrl, countByStatus, endOfDay, serializeVisit, startOfDay } from "@/lib/visits";
 import { getAppUrl } from "@/lib/config/app-url";
@@ -42,6 +43,16 @@ export default async function EmployeeDashboardPage({
 
   return (
     <DeskLayout trailing={<DeskHomeLink />}>
+      <AuthHydrator
+        user={{
+          role: "employee",
+          id: employee.id,
+          email: employee.email,
+          fullName: employee.fullName,
+          department: employee.department,
+          isApproved: employee.isApproved,
+        }}
+      />
       <EmployeeDashboard
         employeeName={employee.fullName}
         photoUrl={employee.photoUrl}

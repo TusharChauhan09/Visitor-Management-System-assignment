@@ -122,6 +122,23 @@ export function checkInUrl(passCode: string, baseUrl: string) {
   return `${baseUrl.replace(/\/$/, "")}/entry/scan?code=${passCode}`;
 }
 
+export const REJECTION_COOLDOWN_HOURS = 24;
+
+export function rejectionCooldownEnds(rejectedAt: Date) {
+  return new Date(rejectedAt.getTime() + REJECTION_COOLDOWN_HOURS * 60 * 60 * 1000);
+}
+
+export function isOnRejectionCooldown(rejectedAt: Date, now = new Date()) {
+  return now < rejectionCooldownEnds(rejectedAt);
+}
+
+export function formatReapplyTime(date: Date) {
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 export function parsePassCode(raw: string) {
   const trimmed = raw.trim();
   try {

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { sendHostApprovalEmail } from "@/lib/email/host-approval";
 import { saveVisitorPhoto } from "@/lib/visitors/photos";
 import { prisma } from "@/lib/db/prisma";
-import { checkInVisit } from "@/lib/visits-db";
+import { checkInVisit, findLatestDeskVisitByEmail, getDeskRegistrationBlock } from "@/lib/visits/db";
 import { parseWindow } from "@/lib/visits";
 
 type ActionState = { error?: string };
@@ -23,6 +23,25 @@ const entrySchema = z.object({
   company: z.string().optional(),
 });
 
+const lookupSchema = z.object({
+  email: z.string().email(),
+});
+
+export async function lookupVisitStatus(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = lookupSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Enter the email you used when registering." };
+
+  const match = await findLatestDeskVisitByEmail(parsed.data.email);
+  if (!match) {
+    return { error: "No desk registration found for that email. Submit a new visitor entry first." };
+  }
+
+  redirect(`/entry/status/${match.id}`);
+}
+
 export async function createVisitorEntry(
   _prev: ActionState,
   formData: FormData
@@ -31,6 +50,9 @@ export async function createVisitorEntry(
   if (!parsed.success) return { error: "Fill in every required field, including a photo." };
 
   const data = parsed.data;
+  const block = await getDeskRegistrationBlock(data.email);
+  if (block) return { error: block };
+
   const window = parseWindow(data.visitFrom, data.visitTo);
   if ("error" in window) return { error: window.error };
 

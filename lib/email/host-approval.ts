@@ -87,8 +87,6 @@ function buildHostApprovalHtml(input: HostApprovalEmailInput) {
               </table>
             </td>
           </tr>
-        </table>
-        <table role="presentation" cellpadding="0" cellspacing="0">
           <tr>
             <td style="padding-right:12px">
               <a href="${approveUrl}" style="display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:600">Approve visit</a>

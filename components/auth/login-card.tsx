@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { loginAdmin, loginEmployee } from "@/app/actions/auth";
 import { AuthPanel, authInputClassName } from "@/components/auth/auth-panel";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,11 @@ import { cn } from "@/lib/utils";
 type Role = "employee" | "admin";
 
 export function LoginCard({ initialRole = "employee" }: { initialRole?: Role }) {
-  const [role, setRole] = useState<Role>(initialRole);
+  const { loginRole, setLoginRole } = useAuth();
+
+  useEffect(() => {
+    setLoginRole(initialRole);
+  }, [initialRole, setLoginRole]);
 
   return (
     <AuthPanel>
@@ -21,20 +25,20 @@ export function LoginCard({ initialRole = "employee" }: { initialRole?: Role }) 
         role="tablist"
         aria-label="Account type"
       >
-        <RoleTab active={role === "employee"} onClick={() => setRole("employee")}>
+        <RoleTab active={loginRole === "employee"} onClick={() => setLoginRole("employee")}>
           Employee
         </RoleTab>
-        <RoleTab active={role === "admin"} onClick={() => setRole("admin")}>
+        <RoleTab active={loginRole === "admin"} onClick={() => setLoginRole("admin")}>
           Admin
         </RoleTab>
       </div>
 
       <h1 className="mt-7 text-2xl font-semibold tracking-tight">
-        {role === "employee" ? "Employee sign in" : "Admin sign in"}
+        {loginRole === "employee" ? "Employee sign in" : "Admin sign in"}
       </h1>
 
       <div className="mt-6">
-        {role === "employee" ? (
+        {loginRole === "employee" ? (
           <CredentialForm
             action={loginEmployee}
             emailId="employee-email"
@@ -51,7 +55,7 @@ export function LoginCard({ initialRole = "employee" }: { initialRole?: Role }) 
         )}
       </div>
 
-      {role === "employee" ? (
+      {loginRole === "employee" ? (
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Need access?{" "}
           <Link

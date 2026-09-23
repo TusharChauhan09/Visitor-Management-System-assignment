@@ -1,6 +1,52 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
-import { parsePassCode } from "@/lib/visits";
+import {
+  formatReapplyTime,
+  isOnRejectionCooldown,
+  parsePassCode,
+  rejectionCooldownEnds,
+} from "@/lib/visits";
+
+async function visitorByEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  return prisma.visitor.findFirst({
+    where: { email: { equals: normalized, mode: "insensitive" } },
+  });
+}
+
+export async function findLatestDeskVisitByEmail(email: string) {
+  const visitor = await visitorByEmail(email);
+  if (!visitor) return null;
+
+  return prisma.visit.findFirst({
+    where: { visitorId: visitor.id, preApproved: false },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+}
+
+export async function getDeskRegistrationBlock(email: string): Promise<string | null> {
+  const visitor = await visitorByEmail(email);
+  if (!visitor) return null;
+
+  const pending = await prisma.visit.findFirst({
+    where: { visitorId: visitor.id, preApproved: false, status: "PENDING" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (pending) {
+    return "You already have a pending request. Use Check request status on the home page to view it.";
+  }
+
+  const rejected = await prisma.visit.findFirst({
+    where: { visitorId: visitor.id, preApproved: false, status: "REJECTED" },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (rejected && isOnRejectionCooldown(rejected.updatedAt)) {
+    return `This visit was declined. You can submit a new request after ${formatReapplyTime(rejectionCooldownEnds(rejected.updatedAt))}.`;
+  }
+
+  return null;
+}
 
 export async function approveVisitByToken(token: string) {
   const visit = await prisma.visit.findUnique({ where: { approvalToken: token } });

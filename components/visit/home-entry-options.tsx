@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, SearchCheck } from "lucide-react";
 import { EntryOptionCard } from "@/components/visit/entry-option-card";
 
 const PASS_QR_IMAGE =
@@ -21,6 +21,12 @@ export function HomeEntryOptions() {
         description="Scan your QR or enter your pass code."
         imageSrc={PASS_QR_IMAGE}
         imageAlt="Example visitor pass QR code"
+      />
+      <EntryOptionCard
+        href="/entry/status"
+        title="Check request status"
+        description="See if your host approved you and open your QR pass again."
+        icon={SearchCheck}
       />
     </div>
   );

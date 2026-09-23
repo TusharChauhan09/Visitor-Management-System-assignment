@@ -1,9 +1,5 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { approvePendingVisit, denyPendingVisit } from "@/app/actions/employee";
-import { logout } from "@/app/actions/auth";
 import type { VisitRow } from "@/lib/visits";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
@@ -12,6 +8,8 @@ import { VisitLogTable } from "@/components/dashboard/visit-log-table";
 import { VisitDetailPanel } from "@/components/dashboard/visit-detail-panel";
 import { PreInviteForm } from "@/components/employee/pre-invite-form";
 import { ProfilePhoto } from "@/components/employee/profile-photo";
+import { SignOutButton } from "@/components/auth/sign-out-button";
+import { useEmployeeDashboard } from "@/hooks/use-employee-dashboard";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,13 +39,16 @@ export function EmployeeDashboard({
   pendingVisits,
   statusCounts,
 }: EmployeeDashboardProps) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [notifyOpen, setNotifyOpen] = useState(pendingVisits.length > 0);
-  const [activePending, setActivePending] = useState<VisitRow | null>(
-    pendingVisits[0] ?? null
-  );
-  const [actionError, setActionError] = useState("");
+  const {
+    notifyOpen,
+    activePending,
+    actionError,
+    pending,
+    openNotifications,
+    closeNotifications,
+    setActivePendingId,
+    runVisitAction,
+  } = useEmployeeDashboard(pendingVisits);
 
   const stats = [
     { label: "Your visitors", value: visits.length },
@@ -56,36 +57,16 @@ export function EmployeeDashboard({
     { label: "Checked in", value: statusCounts.CHECKED_IN ?? 0 },
   ];
 
-  function runVisitAction(visitId: string, action: "approve" | "deny") {
-    setActionError("");
-    startTransition(async () => {
-      const result =
-        action === "approve"
-          ? await approvePendingVisit(visitId)
-          : await denyPendingVisit(visitId);
-      if (result.error) {
-        setActionError(result.error);
-        return;
-      }
-      setNotifyOpen(false);
-      setActivePending(null);
-      router.refresh();
-    });
-  }
-
   const headerActions = (
     <>
       <NotificationBell
         count={pendingVisits.length}
         label="Visitor approval requests"
         onClick={() => {
-          setActivePending(pendingVisits[0] ?? null);
-          setNotifyOpen(true);
+          openNotifications(pendingVisits[0]?.id ?? null);
         }}
       />
-      <form action={logout}>
-        <Button type="submit" variant="outline" size="sm">Sign out</Button>
-      </form>
+      <SignOutButton />
     </>
   );
 
@@ -140,7 +121,7 @@ export function EmployeeDashboard({
         open={notifyOpen}
         title="Visitor approval requests"
         wide
-        onClose={() => setNotifyOpen(false)}
+        onClose={closeNotifications}
       >
         {pendingVisits.length === 0 ? (
           <p className="text-sm text-muted-foreground">No visitors waiting for your approval.</p>
@@ -154,7 +135,7 @@ export function EmployeeDashboard({
                 <button
                   key={visit.id}
                   type="button"
-                  onClick={() => setActivePending(visit)}
+                  onClick={() => setActivePendingId(visit.id)}
                 >
                   <Badge
                     variant={activePending?.id === visit.id ? "default" : "secondary"}

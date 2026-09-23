@@ -68,6 +68,7 @@ model Visit {
   approvalToken String? @unique
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   visitorId String
   visitor   Visitor @relation(fields: [visitorId], references: [id])

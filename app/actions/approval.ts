@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { approveVisitByToken, denyVisitByToken } from "@/lib/visits-db";
+import { approveVisitByToken, denyVisitByToken } from "@/lib/visits/db";
 
 async function finish(kind: "approve" | "deny", formData: FormData) {
   const token = String(formData.get("token") ?? "");
