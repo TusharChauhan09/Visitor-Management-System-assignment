@@ -1,36 +1,346 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Visitor Management System
 
-## Getting Started
+A desk-side visitor management app: walk-in registration, host approval by email, QR pass check-in, employee pre-invites, and admin oversight.
 
-First, run the development server:
+## Tech stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+| Layer | Technology | Role in this project |
+|--------|------------|----------------------|
+| **Framework** | [Next.js 16](https://nextjs.org) (App Router) | Full application: pages, Server Actions, API routes, `proxy.ts` auth gate |
+| **UI** | [React 19](https://react.dev), [Tailwind CSS 4](https://tailwindcss.com), [shadcn/ui](https://ui.shadcn.com) | Components, layout, dark/light theme (`next-themes`) |
+| **Language** | TypeScript | End-to-end typing |
+| **Database** | [PostgreSQL](https://www.postgresql.org) + [Prisma 7](https://www.prisma.io) | Visits, visitors, employees, admins |
+| **Validation** | [Zod](https://zod.dev) | Server Action input checks (login, register, visitor entry, pre-invite) |
+| **Client state** | [Zustand](https://zustand.docs.pmnd.rs) | Auth UI, dashboard modals; synced from server via `AuthHydrator` + `/api/auth/session` |
+| **Auth** | HTTP-only cookie + `proxy.ts` | Session `role:id`; route protection before render; `lib/auth/session.ts` on login/logout |
+| **Images** | [Cloudinary](https://cloudinary.com) | Visitor photos at registration; optional employee profile photos |
+| **Email** | [Resend](https://resend.com) | Host approval emails with Approve / Deny links |
+| **QR** | [html5-qrcode](https://github.com/mebjas/html5-qrcode) + QR image API | Scan pass at desk; pass encodes check-in URL |
+| **Passwords** | bcrypt (via `lib/auth/password.ts`) | Hashed employee and admin passwords |
+
+---
+
+## High-level architecture
+
+```mermaid
+flowchart TB
+  subgraph Public["Public entry"]
+    Home["/ — Entry home"]
+    New["/entry/new — Register"]
+    Scan["/entry/scan — Pass check-in"]
+    Status["/entry/status — Lookup by email"]
+  end
+
+  subgraph Auth["Auth"]
+    Login["/login"]
+    Proxy["proxy.ts — cookie gate"]
+  end
+
+  subgraph Employee["Employee"]
+    EmpDash["/employee — Dashboard"]
+    PreInvite["Pre-invite visitors"]
+    ApproveUI["Approve/deny pending visits"]
+  end
+
+  subgraph Admin["Admin"]
+    AdminDash["/admin — Visits + hosts"]
+  end
+
+  subgraph HostEmail["Host email links"]
+    ApproveLink["/host/approve/:token"]
+    DenyLink["/host/deny/:token"]
+  end
+
+  Home --> New
+  Home --> Scan
+  Home --> Status
+  Home --> Login
+  Login --> Proxy
+  Proxy --> EmpDash
+  Proxy --> AdminDash
+  New --> Resend["Resend email"]
+  Resend --> ApproveLink
+  Resend --> DenyLink
+  Scan --> PG[(PostgreSQL)]
+  New --> PG
+  EmpDash --> PG
+  AdminDash --> PG
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Visitor flows
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Walk-in registration → host approval → pass
 
-## Learn More
+```mermaid
+sequenceDiagram
+  participant V as Visitor
+  participant App as Next.js app
+  participant CL as Cloudinary
+  participant DB as PostgreSQL
+  participant R as Resend
+  participant H as Host (employee)
 
-To learn more about Next.js, take a look at the following resources:
+  V->>App: Submit form at /entry/new (photo, host, window)
+  App->>CL: Upload visitor photo
+  CL-->>App: photoUrl
+  App->>DB: Create Visitor + Visit (PENDING, approvalToken)
+  App->>R: sendHostApprovalEmail
+  R->>H: Email with Approve / Deny links
+  App->>V: Redirect to /entry/status/:visitId (waiting)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+  alt Host approves via email or employee dashboard
+    H->>App: Approve (token or dashboard action)
+    App->>DB: status APPROVED, qrCode UUID
+    V->>App: Check status (email lookup or same URL)
+    App->>V: Show QR pass + pass code
+  else Host denies
+    H->>App: Deny
+    App->>DB: status REJECTED
+    Note over V: Same email blocked from new desk registration 24h
+  end
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Rules**
 
-## Deploy on Vercel
+- Desk registrations (`preApproved: false`) require host approval before a pass exists.
+- **Check request status** (`/entry/status`): visitor enters email → latest desk visit → status page.
+- After **decline**, the same email cannot register again for **24 hours** (from visit `updatedAt`).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 2. QR pass and check-in
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Each approved visit gets a unique **`qrCode`** (UUID) stored in the database.
+
+**What the QR contains**
+
+- Not the raw UUID alone in all cases—the displayed QR encodes a **check-in URL**:
+  - `{APP_URL}/entry/scan?code={qrCode}`
+- Generated in `VisitPassDisplay` using a public QR image service for rendering; scanning opens or resolves that URL.
+
+**Check-in paths**
+
+1. **Scan** — `/entry/scan` uses `html5-qrcode` (camera) → reads URL or code → `POST /api/check-in` or Server Action → `checkInVisit` in `lib/visits/db.ts`.
+2. **Manual** — Enter pass code on the same page.
+3. **Prefilled link** — Opening `/entry/scan?code=...` auto-runs check-in.
+
+```mermaid
+flowchart LR
+  QR["QR / pass code"]
+  ScanPage["/entry/scan"]
+  API["POST /api/check-in"]
+  DB["lib/visits/db.checkInVisit"]
+  Status["/entry/status/:id"]
+
+  QR --> ScanPage
+  ScanPage --> API
+  API --> DB
+  DB -->|CHECKED_IN| Status
+```
+
+On success, status becomes **CHECKED_IN** and the status page shows **Entry successful** (not shown when only approved, before scan).
+
+**Validation at check-in**
+
+- Visit must be `APPROVED`.
+- Optional visit window (`windowStart` / `windowEnd`); outside window → expired or rejected check-in.
+
+### 3. Employee pre-invite (no host email)
+
+```mermaid
+flowchart TD
+  E[Employee /employee] --> F[Pre-invite form]
+  F --> DB[(Visit APPROVED + qrCode immediately)]
+  DB --> Link[Pass link on dashboard]
+  Link --> V[Visitor uses /entry/scan]
+```
+
+Pre-invites skip pending approval and daily limits apply (`maxVisitorsPerDay` per employee).
+
+---
+
+## Authentication and authorization
+
+```mermaid
+flowchart TD
+  subgraph Client
+    Z[Zustand auth store]
+    H[AuthHydrator on dashboard pages]
+  end
+
+  subgraph Edge
+    P[proxy.ts]
+    C[vms_session cookie role:id]
+  end
+
+  subgraph Server
+    S[lib/auth/session.ts set/clear/get]
+    G[lib/auth/guards.ts requireAdmin / requireEmployee]
+  end
+
+  Login[Server Actions login/register] --> S
+  S --> C
+  P --> C
+  P -->|no session| LoginPage[/login]
+  G --> DB[(User exists + employee approved)]
+  H --> Z
+```
+
+| Piece | Location | Purpose |
+|--------|-----------|---------|
+| Cookie | `vms_session` = `employee:id` or `admin:id` | HTTP-only, 7 days |
+| **Proxy** | Root `proxy.ts` | Next.js 16 network boundary (formerly middleware): protect `/admin/*`, `/employee/*` (except `/employee/register`), redirect logged-in users away from `/login` |
+| **Session** | `lib/auth/session.ts` | Set/delete cookie on login, logout, register |
+| **Guards** | `lib/auth/guards.ts` | Server pages: load user from DB; unapproved employees → `/employee/pending` |
+| **Zustand** | `stores/*`, `hooks/use-auth.ts` | Login role toggle, sign-out clear, dashboard UI state |
+| **Validation** | Zod in `app/actions/*.ts` | Email/password, visitor fields, invite fields |
+
+**Login:** single `/login` with Employee / Admin toggle. Legacy `/employee/login` and `/admin/login` redirect to `/login`.
+
+---
+
+## Admin dashboard
+
+- **Visits tab:** stats, status filters, **List** vs **Timeline** toggle (timeline replaces the table; date picker for on-site bars).
+- **Hosts tab:** employee directory; approve/decline new employee registrations.
+- Notifications for pending employee access requests.
+
+---
+
+## Email (Resend)
+
+Host approval email (`lib/email/host-approval.ts`):
+
+- Visitor details + optional photo (Cloudinary URL in email).
+- Buttons: **Approve visit** → `/host/approve/{approvalToken}`, **Deny visit** → `/host/deny/{token}`.
+- Host confirms on a web page; Server Actions update the visit.
+
+**Env:** `RESEND_API_KEY`, `EMAIL_FROM`. Optional `RESEND_TEST_TO` sends all mail to one inbox for testing. If keys are missing, email is skipped (logged in console).
+
+---
+
+## Project structure (main areas)
+
+```
+app/
+  page.tsx                 # Entry home
+  login/                   # Unified login
+  entry/                   # new, scan, status
+  employee/                # Dashboard, register, pending
+  admin/                   # Admin dashboard
+  host/                    # Email approve/deny + result
+  actions/                 # Server Actions (auth, visits, employee, admin)
+  api/auth/session/        # JSON session for client
+  api/check-in/            # Pass check-in API
+components/                # UI, dashboards, visit forms, QR scanner
+hooks/                     # use-auth, use-*-dashboard
+stores/                    # Zustand stores
+lib/
+  auth/                    # constants, session, guards, password
+  visits/                  # index.ts (helpers), db.ts (Prisma)
+  email/                   # Resend templates
+  visitors/photos.ts         # Cloudinary upload
+proxy.ts                   # Auth proxy (Next.js 16)
+prisma/                      # Schema, migrations, seed
+```
+
+---
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20+
+- PostgreSQL running locally (or remote `DATABASE_URL`)
+
+### Setup
+
+1. Clone and install:
+
+   ```bash
+   npm install
+   ```
+
+2. Copy environment variables:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   | Variable | Purpose |
+   |----------|---------|
+   | `DATABASE_URL` | PostgreSQL connection string |
+   | `CLOUDINARY_URL` | Visitor / employee image uploads |
+   | `APP_URL` | Public base URL for links in email and QR |
+   | `RESEND_API_KEY` | Outbound email |
+   | `EMAIL_FROM` | Verified sender in Resend |
+   | `RESEND_TEST_TO` | Optional: redirect all host emails here |
+
+3. Database:
+
+   ```bash
+   npx prisma migrate deploy
+   # or during dev: npx prisma db push
+   npx prisma generate
+   npm run db:seed
+   ```
+
+4. Run:
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000).
+
+### Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | ESLint |
+| `npm run db:seed` | Seed demo admin/employee (see `prisma/seed.ts`) |
+
+---
+
+## Visit status lifecycle
+
+```mermaid
+stateDiagram-v2
+  [*] --> PENDING: Walk-in registered
+  PENDING --> APPROVED: Host approves
+  PENDING --> REJECTED: Host denies
+  APPROVED --> CHECKED_IN: QR / pass check-in
+  APPROVED --> EXPIRED: Window passed without check-in
+  CHECKED_IN --> CHECKED_OUT: Checkout (future/desk)
+  REJECTED --> [*]
+```
+
+Pre-invited visits are created directly in **APPROVED** with a `qrCode`.
+
+---
+
+## Key routes (quick reference)
+
+| Route | Who | Purpose |
+|-------|-----|---------|
+| `/` | Public | Entry options |
+| `/entry/new` | Public | Walk-in registration |
+| `/entry/scan` | Public | QR scan / pass code check-in |
+| `/entry/status` | Public | Lookup visit by email |
+| `/entry/status/:id` | Public | Visit detail, pass, success after check-in |
+| `/login` | Public | Employee / admin sign-in |
+| `/employee/register` | Public | New employee (pending admin) |
+| `/employee/pending` | Employee | Awaiting admin approval |
+| `/employee` | Employee | Visits, pre-invite, approve visitors |
+| `/admin` | Admin | All visits, hosts, timeline |
+| `/host/approve/:token` | Host | Confirm approval from email |
+| `/host/deny/:token` | Host | Confirm denial from email |
+
+---
+
+## License
+
+Private assignment project.
