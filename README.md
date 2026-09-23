@@ -4,7 +4,11 @@ A desk-side visitor management app: walk-in registration, host approval by email
 
 ## Assignment overview (architecture)
 
-System flow (entry portal, host approval, database):
+Assignment system flow (original brief):
+
+![Assignment architecture — entry portal, host approval, QR scan, database](docs/assignment-architecture.png)
+
+Implemented flow (includes **check-out**: second pass scan at `/entry/scan` when leaving):
 
 ```mermaid
 flowchart TB
@@ -40,7 +44,9 @@ flowchart TB
 
 **Checkout (implemented):** same pass scan at `/entry/scan` — first scan **APPROVED → CHECKED_IN**, second scan **CHECKED_IN → CHECKED_OUT** (pass invalidated, `qrCode` cleared). Status page shows exit success after checkout.
 
-Assignment tech stack summary:
+Assignment tech stack (original brief):
+
+![Assignment tech stack](docs/assignment-tech-stack.png)
 
 | Area | Choice |
 |------|--------|
