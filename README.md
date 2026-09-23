@@ -5,6 +5,8 @@ Assignment tech stack (original brief):
 
 ![Assignment tech stack](docs/assignment-tech-stack.png)
 
+**Demo video:** [Watch on Google Drive](https://drive.google.com/file/d/11Yr6Py09m9OqnOIzHt-z1rBywhqMofIZ/view?usp=sharing)
+
 ## Assignment overview (architecture)
 
 Implemented flow (includes **check-out**: second pass scan at `/entry/scan` when leaving):
