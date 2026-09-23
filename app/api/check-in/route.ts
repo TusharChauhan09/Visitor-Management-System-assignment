@@ -19,5 +19,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  return NextResponse.json({ visitId: result.visitId });
+  return NextResponse.json({ visitId: result.visitId, action: result.action });
 }

@@ -14,14 +14,21 @@ async function runCheckIn(code: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ code }),
   });
-  const data = (await response.json()) as { visitId?: string; error?: string };
+  const data = (await response.json()) as {
+    visitId?: string;
+    action?: "check_in" | "check_out";
+    error?: string;
+  };
   if (!response.ok || data.error) {
     return { error: data.error ?? "Check-in failed." };
   }
   if (!data.visitId) {
     return { error: "Check-in did not return a visit." };
   }
-  return { visitId: data.visitId };
+  return {
+    visitId: data.visitId,
+    query: data.action === "check_out" ? "?done=checkout" : "",
+  };
 }
 
 export function PassCheckIn() {
@@ -47,7 +54,7 @@ export function PassCheckIn() {
         scanLockRef.current = false;
         return;
       }
-      router.push(`/entry/status/${result.visitId}`);
+      router.push(`/entry/status/${result.visitId}${result.query ?? ""}`);
     },
     [router]
   );
@@ -74,8 +81,17 @@ export function PassCheckIn() {
       ) : null}
 
       {prefilledCode && !scanning && !error ? (
-        <p className="text-sm text-muted-foreground">Checking in from your pass link…</p>
+        <p className="text-sm text-muted-foreground md:col-span-2">
+          Processing your pass… First scan checks you in; scan the same pass again when you leave to
+          check out.
+        </p>
       ) : null}
+
+      <p className="text-xs leading-relaxed text-muted-foreground md:col-span-2">
+        <strong className="font-medium text-foreground">Entry:</strong> scan when you arrive.{" "}
+        <strong className="font-medium text-foreground">Exit:</strong> scan the same QR or code
+        again when leaving — the pass is invalidated after exit.
+      </p>
 
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 sm:p-5">
         <h2 className="text-base font-semibold tracking-tight">Scan QR pass</h2>
@@ -118,7 +134,7 @@ export function PassCheckIn() {
           <Input id="pass-code" name="passCode" autoComplete="off" defaultValue={prefilledCode} />
         </div>
         <Button type="submit" size="lg" className="h-11 w-full" disabled={pending}>
-          {pending ? "Checking…" : "Check in"}
+          {pending ? "Processing…" : "Submit pass"}
         </Button>
       </form>
     </div>

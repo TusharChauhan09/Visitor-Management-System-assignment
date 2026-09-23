@@ -7,21 +7,34 @@ import {
   rejectionCooldownEnds,
 } from "@/lib/visits";
 
+export async function findLatestVisitByEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  return prisma.visit.findFirst({
+    where: {
+      visitor: { email: { equals: normalized, mode: "insensitive" } },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+}
+
+/** Desk-only lookup (walk-in registrations). */
+export async function findLatestDeskVisitByEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  return prisma.visit.findFirst({
+    where: {
+      preApproved: false,
+      visitor: { email: { equals: normalized, mode: "insensitive" } },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+}
+
 async function visitorByEmail(email: string) {
   const normalized = email.trim().toLowerCase();
   return prisma.visitor.findFirst({
     where: { email: { equals: normalized, mode: "insensitive" } },
-  });
-}
-
-export async function findLatestDeskVisitByEmail(email: string) {
-  const visitor = await visitorByEmail(email);
-  if (!visitor) return null;
-
-  return prisma.visit.findFirst({
-    where: { visitorId: visitor.id, preApproved: false },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
   });
 }
 
@@ -77,15 +90,33 @@ export async function checkInVisit(rawCode: string) {
   if (!code) return { error: "Enter or scan a pass code." };
 
   const visit = await prisma.visit.findUnique({ where: { qrCode: code } });
-  if (!visit) return { error: "This pass was not found." };
-  if (visit.status === "CHECKED_IN") return { visitId: visit.id };
-  if (visit.status !== "APPROVED") return { error: "This pass cannot be used for entry right now." };
+  if (!visit) return { error: "This pass was not found or is no longer valid." };
+
+  if (visit.status === "CHECKED_OUT") {
+    return { error: "This pass was already used for exit and cannot be scanned again." };
+  }
+
+  if (visit.status === "CHECKED_IN") {
+    await prisma.visit.update({
+      where: { id: visit.id },
+      data: {
+        status: "CHECKED_OUT",
+        checkOutAt: new Date(),
+        qrCode: null,
+      },
+    });
+    return { visitId: visit.id, action: "check_out" as const };
+  }
+
+  if (visit.status !== "APPROVED") {
+    return { error: "This pass cannot be used for entry right now." };
+  }
 
   if (visit.windowStart && visit.windowEnd) {
     const now = new Date();
     if (now < visit.windowStart) return { error: "This pass is not valid yet." };
     if (now > visit.windowEnd) {
-      await prisma.visit.update({ where: { id: visit.id }, data: { status: "EXPIRED" } });
+      await prisma.visit.update({ where: { id: visit.id }, data: { status: "EXPIRED", qrCode: null } });
       return { error: "This pass has expired." };
     }
   }
@@ -94,5 +125,5 @@ export async function checkInVisit(rawCode: string) {
     where: { id: visit.id },
     data: { status: "CHECKED_IN", checkInAt: visit.checkInAt ?? new Date() },
   });
-  return { visitId: visit.id };
+  return { visitId: visit.id, action: "check_in" as const };
 }

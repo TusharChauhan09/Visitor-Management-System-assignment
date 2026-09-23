@@ -57,10 +57,13 @@ function formatTime(value: Date | null) {
 
 export default async function VisitStatusPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ done?: string }>;
 }) {
   const { id } = await params;
+  const { done } = await searchParams;
   const visit = await prisma.visit.findUnique({
     where: { id },
     include: { visitor: true, host: true },
@@ -72,6 +75,7 @@ export default async function VisitStatusPage({
 
   const showPass = Boolean(visit.qrCode) && visit.status === "APPROVED";
   const showEntrySuccess = visit.status === "CHECKED_IN";
+  const showExitSuccess = visit.status === "CHECKED_OUT" || done === "checkout";
   const copy = STATUS_COPY[visit.status] ?? STATUS_COPY.PENDING;
   const rejectionLocked =
     visit.status === "REJECTED" && isOnRejectionCooldown(visit.updatedAt);
@@ -80,9 +84,11 @@ export default async function VisitStatusPage({
       ? `${copy.body} You cannot submit a new desk registration until ${formatReapplyTime(rejectionCooldownEnds(visit.updatedAt))}.`
       : copy.body;
 
-  const shellTitle = showEntrySuccess ? undefined : copy.title;
-  const shellDescription = showEntrySuccess ? undefined : description || undefined;
-  const showStatusHeader = !showEntrySuccess;
+  const shellTitle =
+    showEntrySuccess || showExitSuccess ? undefined : copy.title;
+  const shellDescription =
+    showEntrySuccess || showExitSuccess ? undefined : description || undefined;
+  const showStatusHeader = !showEntrySuccess && !showExitSuccess;
 
   return (
     <PageShell title={shellTitle} description={shellDescription}>
@@ -110,14 +116,22 @@ export default async function VisitStatusPage({
           <VisitStatusSuccess
             badge="Approved"
             title="Entry successful"
-            description={`Welcome, ${visit.visitor.fullName}. You checked in${visit.checkInAt ? ` at ${formatTime(visit.checkInAt)}` : ""}.`}
+            description={`Welcome, ${visit.visitor.fullName}. You checked in${visit.checkInAt ? ` at ${formatTime(visit.checkInAt)}` : ""}. Scan the same pass again at the desk when you leave.`}
+          />
+        ) : null}
+
+        {showExitSuccess ? (
+          <VisitStatusSuccess
+            badge="Checked out"
+            title="Exit successful"
+            description={`Goodbye, ${visit.visitor.fullName}. You checked out${visit.checkOutAt ? ` at ${formatTime(visit.checkOutAt)}` : ""}. Your pass is no longer valid.`}
           />
         ) : null}
 
         {showPass ? <VisitPassDisplay qrCode={visit.qrCode!} /> : null}
 
         <section
-          className={cn((showEntrySuccess || showPass) && "border-t border-border pt-6")}
+          className={cn((showEntrySuccess || showExitSuccess || showPass) && "border-t border-border pt-6")}
         >
           <h3 className="text-sm font-semibold tracking-tight">Visitor details</h3>
 
@@ -182,7 +196,7 @@ export default async function VisitStatusPage({
         </section>
       </div>
 
-      {showEntrySuccess ? (
+      {(showEntrySuccess || showExitSuccess) ? (
         <p className="mt-4 text-center text-xs text-muted-foreground">
           <Link href="/entry/status" className="font-medium text-primary underline-offset-4 hover:underline">
             Look up another visit

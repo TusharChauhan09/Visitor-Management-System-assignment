@@ -34,12 +34,22 @@ export default async function EmployeeDashboardPage({
   const serialized = visits.map(serializeVisit);
   const pendingVisits = serialized.filter((v) => v.status === "PENDING");
 
-  const latestInvite = invited
-    ? visits.find((v) => v.id === invited && v.qrCode)
+  const invitedVisit = invited
+    ? await prisma.visit.findFirst({
+        where: { id: invited, hostId: employee.id, preApproved: true },
+        include: { visitor: true },
+      })
     : null;
-  const inviteUrl = latestInvite?.qrCode
-    ? checkInUrl(latestInvite.qrCode, getAppUrl())
-    : null;
+
+  const invitePass =
+    invitedVisit?.qrCode
+      ? {
+          visitorName: invitedVisit.visitor.fullName,
+          qrCode: invitedVisit.qrCode,
+          checkInUrl: checkInUrl(invitedVisit.qrCode, getAppUrl()),
+          statusUrl: `/entry/status/${invitedVisit.id}`,
+        }
+      : null;
 
   return (
     <DeskLayout trailing={<DeskHomeLink />}>
@@ -60,7 +70,8 @@ export default async function EmployeeDashboardPage({
         email={employee.email}
         maxVisitorsPerDay={employee.maxVisitorsPerDay}
         remainingToday={Math.max(0, employee.maxVisitorsPerDay - todayInvites)}
-        inviteUrl={inviteUrl}
+        invitePass={invitePass}
+        defaultTab={invitePass ? "invite" : undefined}
         visits={serialized}
         pendingVisits={pendingVisits}
         statusCounts={countByStatus(visits)}

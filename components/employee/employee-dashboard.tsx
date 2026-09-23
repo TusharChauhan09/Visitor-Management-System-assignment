@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { VisitRow } from "@/lib/visits";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
@@ -9,10 +10,18 @@ import { VisitDetailPanel } from "@/components/dashboard/visit-detail-panel";
 import { PreInviteForm } from "@/components/employee/pre-invite-form";
 import { ProfilePhoto } from "@/components/employee/profile-photo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { VisitPassDisplay } from "@/components/visit/visit-pass-display";
 import { useEmployeeDashboard } from "@/hooks/use-employee-dashboard";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+
+type InvitePass = {
+  visitorName: string;
+  qrCode: string;
+  checkInUrl: string;
+  statusUrl: string;
+};
 
 type EmployeeDashboardProps = {
   employeeName: string;
@@ -21,7 +30,8 @@ type EmployeeDashboardProps = {
   email: string;
   maxVisitorsPerDay: number;
   remainingToday: number;
-  inviteUrl: string | null;
+  invitePass: InvitePass | null;
+  defaultTab?: string;
   visits: VisitRow[];
   pendingVisits: VisitRow[];
   statusCounts: Record<string, number>;
@@ -34,7 +44,8 @@ export function EmployeeDashboard({
   email,
   maxVisitorsPerDay,
   remainingToday,
-  inviteUrl,
+  invitePass,
+  defaultTab,
   visits,
   pendingVisits,
   statusCounts,
@@ -77,7 +88,7 @@ export function EmployeeDashboard({
         description={`${department} · ${email}`}
         leading={<ProfilePhoto name={employeeName} photoUrl={photoUrl} />}
         actions={headerActions}
-        defaultTab="visitors"
+        defaultTab={defaultTab ?? "visitors"}
         tabs={[
           {
             value: "visitors",
@@ -91,14 +102,6 @@ export function EmployeeDashboard({
                     { label: "Invites left today", value: remainingToday, hint: `${maxVisitorsPerDay} daily` },
                   ]}
                 />
-                {inviteUrl ? (
-                  <p className="shrink-0 truncate text-xs text-muted-foreground">
-                    Latest pass:{" "}
-                    <a className="font-medium text-primary underline-offset-4 hover:underline" href={inviteUrl}>
-                      {inviteUrl}
-                    </a>
-                  </p>
-                ) : null}
                 <VisitLogTable visits={visits} showHost={false} />
               </div>
             ),
@@ -107,7 +110,30 @@ export function EmployeeDashboard({
             value: "invite",
             label: "Pre-invite",
             content: (
-              <div className="min-h-0 flex-1 overflow-auto">
+              <div className="min-h-0 flex-1 space-y-5 overflow-auto">
+                {invitePass ? (
+                  <div className="mx-auto w-full max-w-lg space-y-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Pass created</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Share this with <span className="font-medium text-foreground">{invitePass.visitorName}</span>{" "}
+                        for their visit window.
+                      </p>
+                    </div>
+                    <VisitPassDisplay qrCode={invitePass.qrCode} />
+                    <p className="text-xs text-muted-foreground">
+                      Visitor can also{" "}
+                      <Link href="/entry/status" className="font-medium text-primary underline-offset-4 hover:underline">
+                        check status
+                      </Link>{" "}
+                      with their email or open{" "}
+                      <Link href={invitePass.statusUrl} className="font-medium text-primary underline-offset-4 hover:underline">
+                        this visit page
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                ) : null}
                 <div className="mx-auto w-full max-w-2xl">
                   <PreInviteForm remainingToday={remainingToday} />
                 </div>

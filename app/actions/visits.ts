@@ -6,10 +6,10 @@ import { z } from "zod";
 import { sendHostApprovalEmail } from "@/lib/email/host-approval";
 import { saveVisitorPhoto } from "@/lib/visitors/photos";
 import { prisma } from "@/lib/db/prisma";
-import { checkInVisit, findLatestDeskVisitByEmail, getDeskRegistrationBlock } from "@/lib/visits/db";
+import { checkInVisit, findLatestVisitByEmail, getDeskRegistrationBlock } from "@/lib/visits/db";
 import { parseWindow } from "@/lib/visits";
 
-type ActionState = { error?: string };
+type ActionState = { error?: string; visitId?: string };
 
 const entrySchema = z.object({
   fullName: z.string().min(1),
@@ -34,12 +34,12 @@ export async function lookupVisitStatus(
   const parsed = lookupSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Enter the email you used when registering." };
 
-  const match = await findLatestDeskVisitByEmail(parsed.data.email);
+  const match = await findLatestVisitByEmail(parsed.data.email);
   if (!match) {
-    return { error: "No desk registration found for that email. Submit a new visitor entry first." };
+    return { error: "No visit found for that email. Register or ask your host for a pre-invite pass." };
   }
 
-  redirect(`/entry/status/${match.id}`);
+  return { visitId: match.id };
 }
 
 export async function createVisitorEntry(
@@ -114,5 +114,6 @@ export async function checkInByPassCode(
   const result = await checkInVisit(code);
   if ("error" in result) return { error: result.error };
 
-  redirect(`/entry/status/${result.visitId}`);
+  const query = result.action === "check_out" ? "?done=checkout" : "";
+  redirect(`/entry/status/${result.visitId}${query}`);
 }

@@ -1,13 +1,21 @@
 "use client";
 
-import { useActionState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect } from "react";
 import { lookupVisitStatus } from "@/app/actions/visits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function VisitStatusLookupForm() {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(lookupVisitStatus, {});
+
+  useEffect(() => {
+    if (state.visitId) {
+      router.push(`/entry/status/${state.visitId}`);
+    }
+  }, [state.visitId, router]);
 
   return (
     <form
@@ -15,8 +23,8 @@ export function VisitStatusLookupForm() {
       className="mx-auto w-full max-w-md space-y-4 rounded-xl border border-border bg-card p-5 sm:p-6"
     >
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Enter the email from your registration. We&apos;ll show your latest desk request, QR pass, and
-        approval status.
+        Enter the email from your registration. We&apos;ll show your latest visit, pass, and approval
+        status.
       </p>
 
       {state.error ? (

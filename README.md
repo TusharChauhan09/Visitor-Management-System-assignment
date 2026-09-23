@@ -47,8 +47,8 @@ flowchart TB
   end
 
   subgraph HostEmail["Host email links"]
-    ApproveLink["/host/approve/:token"]
-    DenyLink["/host/deny/:token"]
+    ApproveLink["host approve by token"]
+    DenyLink["host deny by token"]
   end
 
   Home --> New
@@ -126,16 +126,16 @@ Each approved visit gets a unique **`qrCode`** (UUID) stored in the database.
 
 ```mermaid
 flowchart LR
-  QR["QR / pass code"]
-  ScanPage["/entry/scan"]
-  API["POST /api/check-in"]
-  DB["lib/visits/db.checkInVisit"]
-  Status["/entry/status/:id"]
+  QR["QR or pass code"]
+  ScanPage["entry scan page"]
+  API["POST api check-in"]
+  DbFn["checkInVisit in lib visits db"]
+  StatusPage["entry status by visit id"]
 
   QR --> ScanPage
   ScanPage --> API
-  API --> DB
-  DB -->|CHECKED_IN| Status
+  API --> DbFn
+  DbFn -->|CHECKED_IN| StatusPage
 ```
 
 On success, status becomes **CHECKED_IN** and the status page shows **Entry successful** (not shown when only approved, before scan).
@@ -149,10 +149,10 @@ On success, status becomes **CHECKED_IN** and the status page shows **Entry succ
 
 ```mermaid
 flowchart TD
-  E[Employee /employee] --> F[Pre-invite form]
-  F --> DB[(Visit APPROVED + qrCode immediately)]
-  DB --> Link[Pass link on dashboard]
-  Link --> V[Visitor uses /entry/scan]
+  E["Employee dashboard"] --> F["Pre-invite form"]
+  F --> VisitDb[("Visit APPROVED with qrCode")]
+  VisitDb --> Link["Pass link on dashboard"]
+  Link --> V["Visitor opens entry scan"]
 ```
 
 Pre-invites skip pending approval and daily limits apply (`maxVisitorsPerDay` per employee).
@@ -164,25 +164,25 @@ Pre-invites skip pending approval and daily limits apply (`maxVisitorsPerDay` pe
 ```mermaid
 flowchart TD
   subgraph Client
-    Z[Zustand auth store]
-    H[AuthHydrator on dashboard pages]
+    Z["Zustand auth store"]
+    H["AuthHydrator on dashboard pages"]
   end
 
   subgraph Edge
-    P[proxy.ts]
-    C[vms_session cookie role:id]
+    P["proxy.ts"]
+    C["vms_session cookie role:id"]
   end
 
   subgraph Server
-    S[lib/auth/session.ts set/clear/get]
-    G[lib/auth/guards.ts requireAdmin / requireEmployee]
+    S["lib auth session.ts"]
+    G["lib auth guards.ts"]
   end
 
-  Login[Server Actions login/register] --> S
+  LoginAction["Server Actions login and register"] --> S
   S --> C
   P --> C
-  P -->|no session| LoginPage[/login]
-  G --> DB[(User exists + employee approved)]
+  P -->|no session| LoginPage["Redirect to login page"]
+  G --> UserDB[("User exists and employee approved")]
   H --> Z
 ```
 
@@ -312,9 +312,9 @@ stateDiagram-v2
   [*] --> PENDING: Walk-in registered
   PENDING --> APPROVED: Host approves
   PENDING --> REJECTED: Host denies
-  APPROVED --> CHECKED_IN: QR / pass check-in
-  APPROVED --> EXPIRED: Window passed without check-in
-  CHECKED_IN --> CHECKED_OUT: Checkout (future/desk)
+  APPROVED --> CHECKED_IN: Pass check-in
+  APPROVED --> EXPIRED: Window passed
+  CHECKED_IN --> CHECKED_OUT: Checkout
   REJECTED --> [*]
 ```
 

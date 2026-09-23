@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import { createVisitorEntry } from "@/app/actions/visits";
 import { PhotoCapture } from "@/components/visit/photo-capture";
 import { PurposeSelect } from "@/components/visit/purpose-select";
+import { HostSearchField } from "@/components/visit/host-search-field";
+import { formInputClassName } from "@/components/visit/form-styles";
 import { DateTimeField, defaultVisitFrom, defaultVisitTo } from "@/components/visit/date-time-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,31 +30,60 @@ export function VisitorRegistrationForm({
   }
 
   return (
-    <form action={formAction} className="mx-auto grid w-full max-w-5xl gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+    <form
+      action={formAction}
+      className="mx-auto grid w-full max-w-5xl gap-5 lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start"
+    >
       <input type="hidden" name="photoData" value={photoData} />
 
-      <div className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-5">
+      <div className="space-y-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+        <header>
+          <h2 className="text-lg font-semibold tracking-tight">Visitor details</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            We will email your host to approve this visit before a pass is issued.
+          </p>
+        </header>
+
         {state.error ? (
           <p
-            className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
             role="alert"
           >
             {state.error}
           </p>
         ) : null}
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Full name" htmlFor="v-name" className="sm:col-span-2">
-            <Input id="v-name" name="fullName" autoComplete="name" required />
+            <Input id="v-name" name="fullName" autoComplete="name" required className={formInputClassName} />
           </Field>
           <Field label="Email" htmlFor="v-email">
-            <Input id="v-email" name="email" type="email" autoComplete="email" required />
+            <Input
+              id="v-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              className={formInputClassName}
+            />
           </Field>
           <Field label="Mobile" htmlFor="v-phone">
-            <Input id="v-phone" name="phone" type="tel" autoComplete="tel" required />
+            <Input
+              id="v-phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              required
+              className={formInputClassName}
+            />
           </Field>
           <Field label="Company" htmlFor="v-company" className="sm:col-span-2">
-            <Input id="v-company" name="company" placeholder="Optional" />
+            <Input
+              id="v-company"
+              name="company"
+              placeholder="Optional"
+              className={formInputClassName}
+            />
           </Field>
           <div className="sm:col-span-2">
             <PurposeSelect id="v-purpose" />
@@ -69,38 +100,24 @@ export function VisitorRegistrationForm({
             label="Visit to"
             defaultValue={defaultVisitTo()}
           />
-          <Field label="Host" htmlFor="v-host" className="sm:col-span-2">
-            <select
-              id="v-host"
-              name="hostId"
-              required
-              defaultValue=""
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              <option value="" disabled>
-                Select name and department
-              </option>
-              {employees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.fullName} — {employee.department}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <div className="sm:col-span-2">
+            <HostSearchField employees={employees} />
+          </div>
         </div>
 
         <Button
           type="submit"
           size="lg"
-          className="h-11 w-full sm:w-auto"
+          className="h-11 w-full rounded-xl sm:w-auto sm:min-w-[12rem]"
           disabled={pending || !hasPhoto || !photoData}
         >
           {pending ? "Sending request…" : "Submit for host approval"}
         </Button>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-        <p className="mb-3 text-sm font-medium">Visitor photo</p>
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6 lg:sticky lg:top-6">
+        <p className="mb-3 text-sm font-semibold">Visitor photo</p>
+        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">Required for the security desk.</p>
         <PhotoCapture compact onPhotoChange={setHasPhoto} onCapture={setPhotoData} />
       </div>
     </form>
