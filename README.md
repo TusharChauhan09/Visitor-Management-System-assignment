@@ -1,6 +1,57 @@
 # Visitor Management System
 
-A desk-side visitor management app: walk-in registration, host approval by email, QR pass check-in, employee pre-invites, and admin oversight.
+A desk-side visitor management app: walk-in registration, host approval by email, QR pass check-in/out, employee pre-invites, and admin oversight.
+
+## Assignment overview (architecture)
+
+System flow (entry portal, host approval, database):
+
+```mermaid
+flowchart TB
+  subgraph Portal["Public entry"]
+    MakeEntry["Make entry — fill details + Request"]
+    HavePass["Already have pass — scan QR / pass code"]
+    SeeStatus["See status — lookup by email"]
+  end
+
+  subgraph Auth["Login"]
+    Login["/login"]
+    AdminDash["Admin — dashboard"]
+    EmpDash["Employee — visitor status + pre-invite"]
+  end
+
+  Login --> AdminDash
+  Login --> EmpDash
+
+  MakeEntry --> Email["Resend — host email"]
+  Email --> HostChoice{"Accept / Decline"}
+  HostChoice -->|Accept| Pass["QR + pass code"]
+  HostChoice -->|Decline| Reject["Reject"]
+  Pass --> SeeStatus
+
+  HavePass --> Scan["Verify at desk — check-in or check-out"]
+  MakeEntry --> DB[(Database)]
+  Reject --> DB
+  Scan --> DB
+  HostChoice --> DB
+  EmpDash --> DB
+  AdminDash --> DB
+```
+
+**Checkout (implemented):** same pass scan at `/entry/scan` — first scan **APPROVED → CHECKED_IN**, second scan **CHECKED_IN → CHECKED_OUT** (pass invalidated, `qrCode` cleared). Status page shows exit success after checkout.
+
+Assignment tech stack summary:
+
+| Area | Choice |
+|------|--------|
+| Language | TypeScript |
+| Frontend / backend | Next.js (App Router) |
+| QR + validation | html5-qrcode, Zod |
+| State management | Zustand |
+| ORM | Prisma |
+| Database | PostgreSQL (Docker locally; Neon or other host for deploy) |
+| Email | Resend |
+| Images | Cloudinary |
 
 ## Tech stack
 
@@ -136,9 +187,15 @@ flowchart LR
   ScanPage --> API
   API --> DbFn
   DbFn -->|CHECKED_IN| StatusPage
+  DbFn -->|CHECKED_OUT second scan| StatusPage
 ```
 
 On success, status becomes **CHECKED_IN** and the status page shows **Entry successful** (not shown when only approved, before scan).
+
+**Check-out**
+
+- Scan or enter the **same pass** again while **CHECKED_IN** → **CHECKED_OUT**, `checkOutAt` set, **`qrCode` cleared** (pass cannot be reused).
+- Redirect to `/entry/status/:id?done=checkout` for exit success UI (`lib/visits/db.ts` → `checkInVisit`).
 
 **Validation at check-in**
 
@@ -215,7 +272,24 @@ Host approval email (`lib/email/host-approval.ts`):
 - Buttons: **Approve visit** → `/host/approve/{approvalToken}`, **Deny visit** → `/host/deny/{token}`.
 - Host confirms on a web page; Server Actions update the visit.
 
-**Env:** `RESEND_API_KEY`, `EMAIL_FROM`. Optional `RESEND_TEST_TO` sends all mail to one inbox for testing. If keys are missing, email is skipped (logged in console).
+**Env**
+
+| Variable | Purpose |
+|----------|---------|
+| `RESEND_API_KEY` | API key from Resend |
+| `EMAIL_FROM` | Sender — use `onboarding@resend.dev` only for testing |
+| `RESEND_TEST_TO` | **Local dev only** — redirects host emails to your inbox when using `onboarding@resend.dev` |
+| `EMAIL_APP_URL` | **Local dev only** — optional public URL for approve/deny links when `APP_URL` is `localhost` |
+
+**Common issues**
+
+1. **“Only send testing emails to your own email”** — With `EMAIL_FROM=onboarding@resend.dev`, use `RESEND_TEST_TO` in **local** `.env` only.
+2. **Resend Insights: links don’t match sending domain** — Locally, set `EMAIL_APP_URL` to your Vercel URL. On Vercel, set `APP_URL` to your live domain.
+3. **Production (Vercel)** — Do **not** set `RESEND_TEST_TO`. Verify a domain in Resend, set `EMAIL_FROM` on that domain, and set `APP_URL` to your live URL so mail goes to real host addresses.
+
+If sending fails after a desk registration, the form shows the Resend error (the visit is still saved in the database).
+
+Test send: `npx tsx scripts/test-resend.ts`
 
 ---
 
@@ -251,7 +325,7 @@ prisma/                      # Schema, migrations, seed
 ### Prerequisites
 
 - Node.js 20+
-- PostgreSQL running locally (or remote `DATABASE_URL`)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (recommended for local Postgres)
 
 ### Setup
 
@@ -261,39 +335,49 @@ prisma/                      # Schema, migrations, seed
    npm install
    ```
 
-2. Copy environment variables:
+2. Start local Postgres:
+
+   ```bash
+   npm run db:up
+   ```
+
+   Uses `docker-compose.yml` — user `postgres`, password `postgres`, database `postgres`, port `5432`.
+
+3. Copy environment variables:
 
    ```bash
    cp .env.example .env
    ```
 
+   Keep the default `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres` for Docker.
+
    | Variable | Purpose |
    |----------|---------|
-   | `DATABASE_URL` | PostgreSQL connection string (Neon, local, etc.) |
+   | `DATABASE_URL` | Docker Postgres locally; Neon (or other) on Vercel |
    | `CLOUDINARY_URL` | Visitor / employee image uploads |
-   | `APP_URL` | Public site URL for email + QR links (set to your Vercel domain in production) |
-   | `NEXT_PUBLIC_APP_URL` | Same as `APP_URL` if you need it on the client |
+   | `APP_URL` | Public site URL for email + QR links |
    | `RESEND_API_KEY` | Outbound email |
    | `EMAIL_FROM` | Verified sender in Resend |
-   | `RESEND_TEST_TO` | Optional: redirect all host emails here |
+   | `RESEND_TEST_TO` | Local `.env` only (omit on Vercel) |
 
-3. Database:
+4. Database:
 
    ```bash
-   npx prisma migrate deploy
-   npx prisma generate
+   npm run db:migrate
    npm run db:seed
    ```
 
-   For **Neon**, paste your connection string from the Neon dashboard into `DATABASE_URL` only. If `migrate deploy` times out on a pooler URL, switch to Neon’s **direct** connection string in the same `DATABASE_URL` variable (host without `-pooler`).
-
-4. Run:
+5. Run:
 
    ```bash
    npm run dev
    ```
 
    Open [http://localhost:3000](http://localhost:3000).
+
+   Stop Postgres: `npm run db:down`
+
+   For **Neon** (deploy only), replace `DATABASE_URL` in Vercel — not needed for local Docker.
 
 ### Deploy on Vercel (with Neon)
 
@@ -304,10 +388,15 @@ prisma/                      # Schema, migrations, seed
    | Name | Value |
    |------|--------|
    | `DATABASE_URL` | Your Neon PostgreSQL connection string |
-   | `APP_URL` | `https://your-production-domain.vercel.app` (or custom domain) |
+   | `APP_URL` | `https://visitor-management-system-assignmen.vercel.app` (your live URL — **not** `localhost`) |
    | `CLOUDINARY_URL` | Your Cloudinary URL |
    | `RESEND_API_KEY` | Resend API key |
-   | `EMAIL_FROM` | Verified sender address |
+   | `EMAIL_FROM` | Verified sender on your domain (not `onboarding@resend.dev` for real hosts) |
+   | `SESSION_SECRET` | Long random string for production cookies |
+
+   Do **not** add `RESEND_TEST_TO` or `EMAIL_APP_URL` on Vercel — those apply only when running locally.
+
+   After adding or changing env vars, **Redeploy**.
 
 4. Deploy. The build runs `prisma generate` (postinstall) and `prisma migrate deploy` before `next build`.
 5. Seed admin/employee **once** against Neon from your machine (seed file is gitignored):

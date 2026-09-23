@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { getAppUrl } from "@/lib/config/app-url";
+import { getAppUrlForEmail } from "@/lib/config/app-url";
 import { visitorPhotoUrlForEmail } from "@/lib/visitors/photos";
 
 type HostApprovalEmailInput = {
@@ -31,14 +31,29 @@ function formatWhen(date: Date) {
 }
 
 function resolveRecipient(hostEmail: string) {
-  if (process.env.RESEND_TEST_TO) {
-    return process.env.RESEND_TEST_TO;
+  if (process.env.NODE_ENV !== "production" && process.env.RESEND_TEST_TO?.trim()) {
+    return process.env.RESEND_TEST_TO.trim();
   }
   return hostEmail;
 }
 
+function isResendTestSender(from: string) {
+  return /@resend\.dev$/i.test(from.replace(/^.*</, "").replace(/>.*$/, "").trim());
+}
+
+function formatResendError(error: { message?: string; name?: string }) {
+  const message = error.message ?? "Unknown error";
+  if (
+    isResendTestSender(process.env.EMAIL_FROM ?? "") &&
+    /only send testing emails|not authorized|validation/i.test(message)
+  ) {
+    return `${message} — With onboarding@resend.dev, Resend only delivers to the email on your Resend account. For local dev, set RESEND_TEST_TO in .env; on production, verify a domain and use EMAIL_FROM on that domain.`;
+  }
+  return message;
+}
+
 function buildHostApprovalHtml(input: HostApprovalEmailInput) {
-  const base = getAppUrl();
+  const base = getAppUrlForEmail();
   const approveUrl = `${base}/host/approve/${input.approvalToken}`;
   const denyUrl = `${base}/host/deny/${input.approvalToken}`;
 
@@ -104,6 +119,31 @@ function buildHostApprovalHtml(input: HostApprovalEmailInput) {
 </html>`;
 }
 
+function buildHostApprovalText(input: HostApprovalEmailInput) {
+  const base = getAppUrlForEmail();
+  const approveUrl = `${base}/host/approve/${input.approvalToken}`;
+  const denyUrl = `${base}/host/deny/${input.approvalToken}`;
+
+  const lines = [
+    `Hi ${input.hostName},`,
+    "",
+    "A visitor at the front desk is waiting to see you.",
+    "",
+    `Visitor: ${input.visitorName}`,
+    `Email: ${input.visitorEmail}`,
+    `Phone: ${input.visitorPhone}`,
+  ];
+  if (input.company) lines.push(`Company: ${input.company}`);
+  lines.push(
+    `Purpose: ${input.purpose}`,
+    `Time: ${formatWhen(input.requestedAt)}`,
+    "",
+    `Approve: ${approveUrl}`,
+    `Deny: ${denyUrl}`,
+  );
+  return lines.join("\n");
+}
+
 export async function sendHostApprovalEmail(input: HostApprovalEmailInput) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
@@ -120,11 +160,13 @@ export async function sendHostApprovalEmail(input: HostApprovalEmailInput) {
     to,
     subject: `Visitor at desk: ${input.visitorName}`,
     html: buildHostApprovalHtml(input),
+    text: buildHostApprovalText(input),
   });
 
   if (error) {
+    const message = formatResendError(error);
     console.error("[email] Resend error:", error);
-    return { error: error.message };
+    return { error: message };
   }
 
   return { sent: true, id: data?.id, to };

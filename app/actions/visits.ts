@@ -88,7 +88,7 @@ export async function createVisitorEntry(
     },
   });
 
-  await sendHostApprovalEmail({
+  const emailResult = await sendHostApprovalEmail({
     hostEmail: host.email,
     hostName: host.fullName,
     visitorName: data.fullName,
@@ -100,6 +100,19 @@ export async function createVisitorEntry(
     requestedAt: new Date(),
     approvalToken,
   });
+
+  if (emailResult.error) {
+    return {
+      error: `Visit was saved, but the host could not be emailed: ${emailResult.error}`,
+    };
+  }
+
+  if ("skipped" in emailResult && emailResult.skipped) {
+    return {
+      error:
+        "Visit was saved, but email is not configured. Set RESEND_API_KEY and EMAIL_FROM in .env.",
+    };
+  }
 
   redirect(`/entry/status/${visit.id}`);
 }
