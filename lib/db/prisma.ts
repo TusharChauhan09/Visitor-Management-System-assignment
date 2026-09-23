@@ -1,28 +1,37 @@
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import { PrismaClient } from "@/app/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-function createPrismaClient() {
+function createPool() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set");
   }
 
-  const adapter = new PrismaPg({ connectionString });
+  const useSsl =
+    connectionString.includes("neon.tech") ||
+    connectionString.includes("sslmode=require") ||
+    process.env.NODE_ENV === "production";
+
+  return new Pool({
+    connectionString,
+    max: Number(process.env.PG_POOL_MAX ?? 5),
+    idleTimeoutMillis: 20_000,
+    connectionTimeoutMillis: 10_000,
+    ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+  });
+}
+
+function createPrismaClient() {
+  const pool = createPool();
+  const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }
 
-function getPrismaClient() {
-  const existing = globalForPrisma.prisma;
-  if (existing && typeof existing.admin?.findUnique === "function") {
-    return existing;
-  }
-  const client = createPrismaClient();
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
-  }
-  return client;
-}
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-export const prisma = getPrismaClient();
+if (!globalForPrisma.prisma) {
+  globalForPrisma.prisma = prisma;
+}

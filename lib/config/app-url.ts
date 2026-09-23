@@ -1,7 +1,16 @@
+/** Public base URL for emails, QR links, and redirects. */
 export function getAppUrl() {
-  const url = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL;
-  if (!url) {
-    return "http://localhost:3000";
+  if (process.env.APP_URL) {
+    return process.env.APP_URL.replace(/\/$/, "");
   }
-  return url.replace(/\/$/, "");
+
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  return "http://localhost:3000";
 }

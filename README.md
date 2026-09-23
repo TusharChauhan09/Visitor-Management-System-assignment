@@ -269,9 +269,10 @@ prisma/                      # Schema, migrations, seed
 
    | Variable | Purpose |
    |----------|---------|
-   | `DATABASE_URL` | PostgreSQL connection string |
+   | `DATABASE_URL` | PostgreSQL connection string (Neon, local, etc.) |
    | `CLOUDINARY_URL` | Visitor / employee image uploads |
-   | `APP_URL` | Public base URL for links in email and QR |
+   | `APP_URL` | Public site URL for email + QR links (set to your Vercel domain in production) |
+   | `NEXT_PUBLIC_APP_URL` | Same as `APP_URL` if you need it on the client |
    | `RESEND_API_KEY` | Outbound email |
    | `EMAIL_FROM` | Verified sender in Resend |
    | `RESEND_TEST_TO` | Optional: redirect all host emails here |
@@ -280,10 +281,11 @@ prisma/                      # Schema, migrations, seed
 
    ```bash
    npx prisma migrate deploy
-   # or during dev: npx prisma db push
    npx prisma generate
    npm run db:seed
    ```
+
+   For **Neon**, paste your connection string from the Neon dashboard into `DATABASE_URL` only. If `migrate deploy` times out on a pooler URL, switch to Neon’s **direct** connection string in the same `DATABASE_URL` variable (host without `-pooler`).
 
 4. Run:
 
@@ -292,6 +294,35 @@ prisma/                      # Schema, migrations, seed
    ```
 
    Open [http://localhost:3000](http://localhost:3000).
+
+### Deploy on Vercel (with Neon)
+
+1. Push the repo to GitHub and import the project in [Vercel](https://vercel.com).
+2. Add a **Neon** integration (or paste env vars manually from the Neon dashboard).
+3. Set these **Environment Variables** for Production (and Preview if you want):
+
+   | Name | Value |
+   |------|--------|
+   | `DATABASE_URL` | Your Neon PostgreSQL connection string |
+   | `APP_URL` | `https://your-production-domain.vercel.app` (or custom domain) |
+   | `CLOUDINARY_URL` | Your Cloudinary URL |
+   | `RESEND_API_KEY` | Resend API key |
+   | `EMAIL_FROM` | Verified sender address |
+
+4. Deploy. The build runs `prisma generate` (postinstall) and `prisma migrate deploy` before `next build`.
+5. Seed admin/employee **once** against Neon from your machine (seed file is gitignored):
+
+   ```bash
+   npm run db:seed
+   ```
+
+6. In Resend, use a sending domain that matches production; set `APP_URL` to the live URL so approval emails and QR codes point to Vercel, not localhost.
+
+**Notes**
+
+- Session cookies use `secure` + `sameSite: lax` in production (required for HTTPS on Vercel).
+- If Vercel build fails on `migrate deploy` with a pooler URL, use Neon’s direct connection string as `DATABASE_URL` instead.
+- `VERCEL_URL` is used as a fallback for links when `APP_URL` is not set, but you should set `APP_URL` explicitly for emails and QR codes.
 
 ### Scripts
 
