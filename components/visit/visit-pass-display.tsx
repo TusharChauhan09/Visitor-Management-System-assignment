@@ -1,13 +1,13 @@
 import { getAppUrl } from "@/lib/config/app-url";
-import { buildCheckInUrl } from "@/lib/visits/pass-code";
+import { checkInUrl } from "@/lib/visits";
 
 type VisitPassDisplayProps = {
   qrCode: string;
 };
 
 export function VisitPassDisplay({ qrCode }: VisitPassDisplayProps) {
-  const checkInUrl = buildCheckInUrl(qrCode, getAppUrl());
-  const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(checkInUrl)}`;
+  const checkInHref = checkInUrl(qrCode, getAppUrl());
+  const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(checkInHref)}`;
 
   return (
     <div className="rounded-xl border border-border bg-muted/20 p-6">

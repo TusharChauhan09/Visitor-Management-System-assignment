@@ -3,21 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { approveEmployeeForm, rejectEmployeeForm } from "@/app/actions/admin";
-import { logoutAdmin } from "@/app/actions/auth";
-import { EmployeeDirectory } from "@/components/admin/employee-directory";
-import type { AdminEmployeeEntry, PendingEmployeeEntry, VisitLogEntry } from "@/lib/types";
+import { logout } from "@/app/actions/auth";
+import { EmployeeDirectory, type Host } from "@/components/admin/employee-directory";
+import type { VisitRow } from "@/lib/visits";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { VisitLogTable } from "@/components/dashboard/visit-log-table";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 type AdminDashboardProps = {
-  visits: VisitLogEntry[];
-  employees: AdminEmployeeEntry[];
-  pendingEmployees: PendingEmployeeEntry[];
+  visits: VisitRow[];
+  employees: Host[];
+  pendingEmployees: Host[];
   statusCounts: Record<string, number>;
 };
 
@@ -29,7 +28,7 @@ export function AdminDashboard({
 }: AdminDashboardProps) {
   const router = useRouter();
   const [notifyOpen, setNotifyOpen] = useState(pendingEmployees.length > 0);
-  const [selectedEmployee, setSelectedEmployee] = useState<PendingEmployeeEntry | null>(
+  const [selectedEmployee, setSelectedEmployee] = useState<Host | null>(
     null
   );
 
@@ -48,7 +47,7 @@ export function AdminDashboard({
         label="Employee access requests"
         onClick={() => setNotifyOpen(true)}
       />
-      <form action={logoutAdmin}>
+      <form action={logout}>
         <Button type="submit" variant="outline" size="sm">Sign out</Button>
       </form>
     </>
@@ -69,7 +68,7 @@ export function AdminDashboard({
             content: (
               <div className="flex min-h-0 flex-1 flex-col gap-3">
                 <StatCards stats={stats} />
-                <VisitLogTable visits={visits} showHost />
+                <VisitLogTable visits={visits} showHost showTimeline />
               </div>
             ),
           },
@@ -159,7 +158,7 @@ export function AdminDashboard({
                 <dd>{selectedEmployee.phone}</dd>
               </div>
             </dl>
-            <Separator />
+            <hr className="border-border" />
             <div className="flex gap-2 pt-2">
               <form action={approveEmployeeForm}>
                 <input type="hidden" name="employeeId" value={selectedEmployee.id} />

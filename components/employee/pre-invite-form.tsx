@@ -2,32 +2,21 @@
 
 import { useActionState } from "react";
 import { createPreInvite } from "@/app/actions/employee";
+import { PurposeSelect } from "@/components/visit/purpose-select";
+import { DateTimeField, defaultVisitFrom, defaultVisitTo } from "@/components/visit/date-time-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fieldClass } from "@/lib/form";
-import { VISIT_PURPOSE_OPTIONS } from "@/lib/visits/constants";
-import {
-  defaultVisitFromValue,
-  defaultVisitToValue,
-} from "@/lib/visits/visit-window";
-import type { ActionState } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 export function PreInviteForm({ remainingToday }: { remainingToday: number }) {
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(
-    createPreInvite,
-    {}
-  );
+  const [state, formAction, pending] = useActionState(createPreInvite, {});
 
   return (
-    <form action={formAction} className="max-w-3xl rounded-lg border border-border bg-card p-4">
-      <div className="mb-4 flex items-end justify-between gap-3">
+    <form action={formAction} className="w-full rounded-xl border border-border bg-card p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Pre-invite a visitor</h2>
-          <p className="text-sm text-muted-foreground">
-            {remainingToday} left today
-          </p>
+          <p className="text-sm text-muted-foreground">{remainingToday} left today</p>
         </div>
         <Button type="submit" disabled={pending || remainingToday <= 0}>
           {pending ? "Creating…" : "Send invite"}
@@ -53,45 +42,25 @@ export function PreInviteForm({ remainingToday }: { remainingToday: number }) {
           <Label htmlFor="pre-phone">Phone</Label>
           <Input id="pre-phone" name="phone" type="tel" required />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="pre-company">Company</Label>
-          <Input id="pre-company" name="company" />
+          <Input id="pre-company" name="company" placeholder="Optional" />
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="pre-purpose">Purpose</Label>
-          <select
-            id="pre-purpose"
-            name="purpose"
-            required
-            defaultValue=""
-            className={cn(fieldClass)}
-          >
-            <option value="" disabled>Select purpose</option>
-            {VISIT_PURPOSE_OPTIONS.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
+        <div className="sm:col-span-2">
+          <PurposeSelect id="pre-purpose" />
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="pre-from">Visit from</Label>
-          <Input
-            id="pre-from"
-            type="datetime-local"
-            name="visitFrom"
-            required
-            defaultValue={defaultVisitFromValue()}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="pre-to">Visit to</Label>
-          <Input
-            id="pre-to"
-            type="datetime-local"
-            name="visitTo"
-            required
-            defaultValue={defaultVisitToValue()}
-          />
-        </div>
+        <DateTimeField
+          id="pre-from"
+          name="visitFrom"
+          label="Visit from"
+          defaultValue={defaultVisitFrom()}
+        />
+        <DateTimeField
+          id="pre-to"
+          name="visitTo"
+          label="Visit to"
+          defaultValue={defaultVisitTo()}
+        />
       </div>
     </form>
   );

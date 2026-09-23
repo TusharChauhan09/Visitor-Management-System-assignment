@@ -5,8 +5,8 @@ import { useActionState, useCallback, useEffect, useRef, useState } from "react"
 import { checkInByPassCode } from "@/app/actions/visits";
 import { QrPassScanner } from "@/components/visit/qr-pass-scanner";
 import { Button } from "@/components/ui/button";
-import { fieldClass } from "@/lib/form";
-import type { ActionState } from "@/lib/types";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 async function runCheckIn(code: string) {
   const response = await fetch("/api/check-in", {
@@ -32,10 +32,7 @@ export function PassCheckIn() {
   const [scanError, setScanError] = useState("");
   const [scanning, setScanning] = useState(!prefilledCode);
   const [scannerKey, setScannerKey] = useState(0);
-  const [formState, formAction, pending] = useActionState<ActionState, FormData>(
-    checkInByPassCode,
-    {}
-  );
+  const [formState, formAction, pending] = useActionState(checkInByPassCode, {});
 
   const handleCheckIn = useCallback(
     async (code: string) => {
@@ -56,17 +53,22 @@ export function PassCheckIn() {
   );
 
   useEffect(() => {
-    if (prefilledCode) {
+    if (!prefilledCode) return;
+    const timer = window.setTimeout(() => {
       void handleCheckIn(prefilledCode);
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [prefilledCode, handleCheckIn]);
 
   const error = scanError || formState.error;
 
   return (
-    <div className="max-w-xl space-y-10">
+    <div className="grid items-start gap-6 md:grid-cols-2">
       {error ? (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
+        <p
+          className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive md:col-span-2"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
@@ -75,7 +77,7 @@ export function PassCheckIn() {
         <p className="text-sm text-muted-foreground">Checking in from your pass link…</p>
       ) : null}
 
-      <section className="space-y-3">
+      <section className="space-y-3 rounded-xl border border-border bg-card p-4 sm:p-5">
         <h2 className="text-base font-semibold tracking-tight">Scan QR pass</h2>
         {scanning ? (
           <QrPassScanner
@@ -109,13 +111,13 @@ export function PassCheckIn() {
         ) : null}
       </section>
 
-      <form action={formAction} className="space-y-3 border-t border-border pt-8">
-        <h2 className="text-base font-semibold tracking-tight">Or type the pass code</h2>
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Pass code</span>
-          <input name="passCode" className={fieldClass} autoComplete="off" defaultValue={prefilledCode} />
-        </label>
-        <Button type="submit" size="lg" className="h-11" disabled={pending}>
+      <form action={formAction} className="space-y-3 rounded-xl border border-border bg-card p-4 sm:p-5">
+        <h2 className="text-base font-semibold tracking-tight">Enter pass code</h2>
+        <div className="space-y-1.5">
+          <Label htmlFor="pass-code">Pass code</Label>
+          <Input id="pass-code" name="passCode" autoComplete="off" defaultValue={prefilledCode} />
+        </div>
+        <Button type="submit" size="lg" className="h-11 w-full" disabled={pending}>
           {pending ? "Checking…" : "Check in"}
         </Button>
       </form>

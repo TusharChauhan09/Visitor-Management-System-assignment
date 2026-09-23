@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Shield } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 type SiteHeaderProps = {
@@ -9,28 +9,18 @@ type SiteHeaderProps = {
 
 export function SiteHeader({ trailing, className }: SiteHeaderProps) {
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-10 shrink-0 border-b border-border bg-background",
-        className
-      )}
-    >
-      <div className="flex h-14 items-center justify-between gap-4 px-6">
+    <header className={cn("sticky top-0 z-20 px-4 pt-4 sm:px-6", className)}>
+      <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background/90 px-4 py-2 shadow-sm backdrop-blur-md sm:px-5">
         <Link
           href="/"
-          className="flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="min-w-0 truncate rounded-lg text-base font-semibold tracking-tight outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <span
-            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-foreground text-background"
-            aria-hidden
-          >
-            <Shield className="size-4" strokeWidth={2.25} />
-          </span>
-          <span className="min-w-0 truncate text-base font-semibold tracking-tight">
-            Visitor Management
-          </span>
+          Visitor Management
         </Link>
-        {trailing}
+        <div className="flex items-center gap-2">
+          {trailing}
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

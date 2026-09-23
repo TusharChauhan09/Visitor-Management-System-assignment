@@ -3,13 +3,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { approveEmployeeForm, rejectEmployeeForm } from "@/app/actions/admin";
-import type { AdminEmployeeEntry } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 
-export function EmployeeDirectory({ employees }: { employees: AdminEmployeeEntry[] }) {
+export type Host = {
+  id: string;
+  fullName: string;
+  email: string;
+  department: string;
+  phone: string;
+  isApproved: boolean;
+  maxVisitorsPerDay: number;
+  totalVisits: number;
+  pendingVisits: number;
+  checkedInVisits: number;
+};
+
+export function EmployeeDirectory({ employees }: { employees: Host[] }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<AdminEmployeeEntry | null>(null);
+  const [selected, setSelected] = useState<Host | null>(null);
 
   if (employees.length === 0) {
     return (

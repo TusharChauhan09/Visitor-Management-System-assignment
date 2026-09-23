@@ -1,26 +1,20 @@
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
+import type { Host } from "@/components/admin/employee-directory";
 import { DeskHomeLink, DeskLayout } from "@/components/layout/desk-layout";
 import { requireAdmin } from "@/lib/auth/guards";
-import type { AdminEmployeeEntry } from "@/lib/types";
-import { countByStatus, serializeVisitLog } from "@/lib/visits/visit-log";
+import { countByStatus, serializeVisit } from "@/lib/visits";
 import { prisma } from "@/lib/db/prisma";
 
-function toAdminEmployee(
-  employee: {
-    id: string;
-    fullName: string;
-    email: string;
-    department: string;
-    phone: string;
-    isApproved: boolean;
-    maxVisitorsPerDay: number;
-    visits: { status: string }[];
-  }
-): AdminEmployeeEntry {
-  const totalVisits = employee.visits.length;
-  const pendingVisits = employee.visits.filter((v) => v.status === "PENDING").length;
-  const checkedInVisits = employee.visits.filter((v) => v.status === "CHECKED_IN").length;
-
+function toHost(employee: {
+  id: string;
+  fullName: string;
+  email: string;
+  department: string;
+  phone: string;
+  isApproved: boolean;
+  maxVisitorsPerDay: number;
+  visits: { status: string }[];
+}): Host {
   return {
     id: employee.id,
     fullName: employee.fullName,
@@ -29,9 +23,9 @@ function toAdminEmployee(
     phone: employee.phone,
     isApproved: employee.isApproved,
     maxVisitorsPerDay: employee.maxVisitorsPerDay,
-    totalVisits,
-    pendingVisits,
-    checkedInVisits,
+    totalVisits: employee.visits.length,
+    pendingVisits: employee.visits.filter((v) => v.status === "PENDING").length,
+    checkedInVisits: employee.visits.filter((v) => v.status === "CHECKED_IN").length,
   };
 }
 
@@ -58,21 +52,13 @@ export default async function AdminPage() {
     }),
   ]);
 
-  const employeeRows = employees.map(toAdminEmployee);
-  const pendingEmployees = employeeRows
-    .filter((e) => !e.isApproved)
-    .map(({ id, fullName, email, department, phone }) => ({
-      id,
-      fullName,
-      email,
-      department,
-      phone,
-    }));
+  const employeeRows = employees.map(toHost);
+  const pendingEmployees = employeeRows.filter((e) => !e.isApproved);
 
   return (
     <DeskLayout trailing={<DeskHomeLink />}>
       <AdminDashboard
-        visits={visits.map(serializeVisitLog)}
+        visits={visits.map(serializeVisit)}
         employees={employeeRows}
         pendingEmployees={pendingEmployees}
         statusCounts={countByStatus(visits)}

@@ -8,9 +8,10 @@ type EntryOptionCardProps = {
   href: string;
   title: string;
   description: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
+  imageSrc?: string;
+  imageAlt?: string;
   className?: string;
-  index?: number;
 };
 
 export function EntryOptionCard({
@@ -18,8 +19,13 @@ export function EntryOptionCard({
   title,
   description,
   icon: Icon,
+  imageSrc,
+  imageAlt = "",
   className,
 }: EntryOptionCardProps) {
+  const mediaClassName =
+    "flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border";
+
   return (
     <Link
       href={href}
@@ -28,12 +34,17 @@ export function EntryOptionCard({
         className
       )}
     >
-      <span
-        className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50"
-        aria-hidden
-      >
-        <Icon className="size-5" strokeWidth={1.75} />
-      </span>
+      {imageSrc ? (
+        <span className={cn(mediaClassName, "bg-white p-1")}>
+          {/* Cloudinary SVG; Next image optimization does not process SVG. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imageSrc} alt={imageAlt} className="size-full object-contain" />
+        </span>
+      ) : Icon ? (
+        <span className={cn(mediaClassName, "bg-muted/50")} aria-hidden>
+          <Icon className="size-5" strokeWidth={1.75} />
+        </span>
+      ) : null}
       <div className="min-w-0 flex-1 space-y-1 pr-2">
         <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>

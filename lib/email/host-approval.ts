@@ -1,7 +1,19 @@
 import { Resend } from "resend";
 import { getAppUrl } from "@/lib/config/app-url";
 import { visitorPhotoUrlForEmail } from "@/lib/visitors/photos";
-import type { HostApprovalEmailInput } from "@/lib/types";
+
+type HostApprovalEmailInput = {
+  hostEmail: string;
+  hostName: string;
+  visitorName: string;
+  visitorEmail: string;
+  visitorPhone: string;
+  company: string | null;
+  purpose: string;
+  photoUrl: string | null;
+  requestedAt: Date;
+  approvalToken: string;
+};
 
 function escapeHtml(value: string) {
   return value

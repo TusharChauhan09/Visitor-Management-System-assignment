@@ -1,50 +1,24 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { approveVisitByToken, denyVisitByToken } from "@/lib/visits/approval";
+import { approveVisitByToken, denyVisitByToken } from "@/lib/visits-db";
 
-function getToken(formData: FormData) {
-  const value = formData.get("token");
-  if (typeof value !== "string" || !value.trim()) {
-    return null;
+async function finish(kind: "approve" | "deny", formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  if (!token) redirect("/host/result?status=failed");
+
+  const result = kind === "approve" ? await approveVisitByToken(token) : await denyVisitByToken(token);
+  if ("error" in result) {
+    redirect(result.visitId ? `/host/result?status=failed&visitId=${result.visitId}` : "/host/result?status=failed");
   }
-  return value.trim();
+
+  redirect(`/host/result?status=${kind === "approve" ? "APPROVED" : "REJECTED"}&visitId=${result.visit.id}`);
 }
 
 export async function confirmApproveForm(formData: FormData) {
-  const token = getToken(formData);
-  if (!token) {
-    redirect("/host/result?error=Invalid%20approval%20link");
-  }
-
-  const result = await approveVisitByToken(token);
-  if ("error" in result) {
-    if (result.visitId) {
-      redirect(
-        `/host/result?error=${encodeURIComponent(result.error ?? "Request failed")}&visitId=${result.visitId}`
-      );
-    }
-    redirect(`/host/result?error=${encodeURIComponent(result.error ?? "Request failed")}`);
-  }
-
-  redirect(`/host/result?visitId=${result.visit.id}&status=APPROVED`);
+  await finish("approve", formData);
 }
 
 export async function confirmDenyForm(formData: FormData) {
-  const token = getToken(formData);
-  if (!token) {
-    redirect("/host/result?error=Invalid%20approval%20link");
-  }
-
-  const result = await denyVisitByToken(token);
-  if ("error" in result) {
-    if (result.visitId) {
-      redirect(
-        `/host/result?error=${encodeURIComponent(result.error ?? "Request failed")}&visitId=${result.visitId}`
-      );
-    }
-    redirect(`/host/result?error=${encodeURIComponent(result.error ?? "Request failed")}`);
-  }
-
-  redirect(`/host/result?visitId=${result.visit.id}&status=REJECTED`);
+  await finish("deny", formData);
 }

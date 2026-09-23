@@ -14,7 +14,7 @@ function configureCloudinary() {
   });
 }
 
-export async function saveVisitorPhoto(dataUrl: string) {
+export async function saveVisitorPhoto(dataUrl: string, folder = "vms/visitors") {
   const match = /^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i.exec(dataUrl);
   if (!match) {
     throw new Error("Photo must be a JPEG, PNG, or WebP image.");
@@ -28,7 +28,7 @@ export async function saveVisitorPhoto(dataUrl: string) {
 
   try {
     const result = await cloudinary.uploader.upload(dataUrl, {
-      folder: "vms/visitors",
+      folder,
       resource_type: "image",
     });
     if (!result.secure_url) {

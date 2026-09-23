@@ -3,43 +3,35 @@
 import { useActionState, useState } from "react";
 import { createVisitorEntry } from "@/app/actions/visits";
 import { PhotoCapture } from "@/components/visit/photo-capture";
+import { PurposeSelect } from "@/components/visit/purpose-select";
+import { DateTimeField, defaultVisitFrom, defaultVisitTo } from "@/components/visit/date-time-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fieldClass } from "@/lib/form";
 import { cn } from "@/lib/utils";
-import type { ActionState, EmployeeOption } from "@/lib/types";
-import { VISIT_PURPOSE_OPTIONS } from "@/lib/visits/constants";
-import {
-  defaultVisitFromValue,
-  defaultVisitToValue,
-} from "@/lib/visits/visit-window";
 
 export function VisitorRegistrationForm({
   employees,
 }: {
-  employees: EmployeeOption[];
+  employees: { id: string; fullName: string; department: string }[];
 }) {
   const [hasPhoto, setHasPhoto] = useState(false);
   const [photoData, setPhotoData] = useState("");
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(
-    createVisitorEntry,
-    {}
-  );
+  const [state, formAction, pending] = useActionState(createVisitorEntry, {});
 
   if (employees.length === 0) {
     return (
-      <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+      <p className="text-sm leading-relaxed text-muted-foreground">
         No approved host employees yet. Ask an employee to register and get admin approval.
       </p>
     );
   }
 
   return (
-    <form action={formAction} className="grid h-full min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+    <form action={formAction} className="mx-auto grid w-full max-w-5xl gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
       <input type="hidden" name="photoData" value={photoData} />
 
-      <div className="min-h-0 space-y-3 overflow-auto rounded-lg border border-border bg-card p-4">
+      <div className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-5">
         {state.error ? (
           <p
             className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
@@ -60,49 +52,34 @@ export function VisitorRegistrationForm({
             <Input id="v-phone" name="phone" type="tel" autoComplete="tel" required />
           </Field>
           <Field label="Company" htmlFor="v-company" className="sm:col-span-2">
-            <Input id="v-company" name="company" />
+            <Input id="v-company" name="company" placeholder="Optional" />
           </Field>
-          <Field label="Purpose" htmlFor="v-purpose" className="sm:col-span-2">
-            <select
-              id="v-purpose"
-              name="purpose"
-              required
-              defaultValue=""
-              className={cn(fieldClass)}
-            >
-              <option value="" disabled>Select a purpose</option>
-              {VISIT_PURPOSE_OPTIONS.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Visit from" htmlFor="v-from">
-            <Input
-              id="v-from"
-              type="datetime-local"
-              name="visitFrom"
-              required
-              defaultValue={defaultVisitFromValue()}
-            />
-          </Field>
-          <Field label="Visit to" htmlFor="v-to">
-            <Input
-              id="v-to"
-              type="datetime-local"
-              name="visitTo"
-              required
-              defaultValue={defaultVisitToValue()}
-            />
-          </Field>
+          <div className="sm:col-span-2">
+            <PurposeSelect id="v-purpose" />
+          </div>
+          <DateTimeField
+            id="v-from"
+            name="visitFrom"
+            label="Visit from"
+            defaultValue={defaultVisitFrom()}
+          />
+          <DateTimeField
+            id="v-to"
+            name="visitTo"
+            label="Visit to"
+            defaultValue={defaultVisitTo()}
+          />
           <Field label="Host" htmlFor="v-host" className="sm:col-span-2">
             <select
               id="v-host"
               name="hostId"
               required
               defaultValue=""
-              className={cn(fieldClass)}
+              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             >
-              <option value="" disabled>Select name and department</option>
+              <option value="" disabled>
+                Select name and department
+              </option>
               {employees.map((employee) => (
                 <option key={employee.id} value={employee.id}>
                   {employee.fullName} — {employee.department}
@@ -115,14 +92,14 @@ export function VisitorRegistrationForm({
         <Button
           type="submit"
           size="lg"
-          className="mt-1 w-full sm:w-auto"
+          className="h-11 w-full sm:w-auto"
           disabled={pending || !hasPhoto || !photoData}
         >
           {pending ? "Sending request…" : "Submit for host approval"}
         </Button>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4">
+      <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
         <p className="mb-3 text-sm font-medium">Visitor photo</p>
         <PhotoCapture compact onPhotoChange={setHasPhoto} onCapture={setPhotoData} />
       </div>

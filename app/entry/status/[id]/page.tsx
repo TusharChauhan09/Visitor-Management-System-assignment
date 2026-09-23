@@ -67,7 +67,7 @@ export default async function VisitStatusPage({
 
   return (
     <PageShell title={copy.title} description={copy.body}>
-      <div className="max-w-xl space-y-8">
+      <div className="space-y-6 rounded-xl border border-border bg-card p-4 sm:p-6">
         {visit.photoUrl ? (
           <div className="overflow-hidden rounded-xl border border-border">
             <Image

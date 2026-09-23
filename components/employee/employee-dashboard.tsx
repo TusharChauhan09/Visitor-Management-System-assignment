@@ -3,32 +3,35 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { approvePendingVisit, denyPendingVisit } from "@/app/actions/employee";
-import { logoutEmployee } from "@/app/actions/auth";
-import type { VisitLogEntry } from "@/lib/types";
+import { logout } from "@/app/actions/auth";
+import type { VisitRow } from "@/lib/visits";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { VisitLogTable } from "@/components/dashboard/visit-log-table";
 import { VisitDetailPanel } from "@/components/dashboard/visit-detail-panel";
 import { PreInviteForm } from "@/components/employee/pre-invite-form";
+import { ProfilePhoto } from "@/components/employee/profile-photo";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 type EmployeeDashboardProps = {
   employeeName: string;
+  photoUrl: string | null;
   department: string;
   email: string;
   maxVisitorsPerDay: number;
   remainingToday: number;
   inviteUrl: string | null;
-  visits: VisitLogEntry[];
-  pendingVisits: VisitLogEntry[];
+  visits: VisitRow[];
+  pendingVisits: VisitRow[];
   statusCounts: Record<string, number>;
 };
 
 export function EmployeeDashboard({
   employeeName,
+  photoUrl,
   department,
   email,
   maxVisitorsPerDay,
@@ -41,7 +44,7 @@ export function EmployeeDashboard({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [notifyOpen, setNotifyOpen] = useState(pendingVisits.length > 0);
-  const [activePending, setActivePending] = useState<VisitLogEntry | null>(
+  const [activePending, setActivePending] = useState<VisitRow | null>(
     pendingVisits[0] ?? null
   );
   const [actionError, setActionError] = useState("");
@@ -80,7 +83,7 @@ export function EmployeeDashboard({
           setNotifyOpen(true);
         }}
       />
-      <form action={logoutEmployee}>
+      <form action={logout}>
         <Button type="submit" variant="outline" size="sm">Sign out</Button>
       </form>
     </>
@@ -91,6 +94,7 @@ export function EmployeeDashboard({
       <DashboardFrame
         title={employeeName}
         description={`${department} · ${email}`}
+        leading={<ProfilePhoto name={employeeName} photoUrl={photoUrl} />}
         actions={headerActions}
         defaultTab="visitors"
         tabs={[
@@ -123,7 +127,9 @@ export function EmployeeDashboard({
             label: "Pre-invite",
             content: (
               <div className="min-h-0 flex-1 overflow-auto">
-                <PreInviteForm remainingToday={remainingToday} />
+                <div className="mx-auto w-full max-w-2xl">
+                  <PreInviteForm remainingToday={remainingToday} />
+                </div>
               </div>
             ),
           },

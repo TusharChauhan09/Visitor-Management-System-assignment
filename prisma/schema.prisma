@@ -33,6 +33,7 @@ model Employee {
   password          String
   department        String
   phone             String
+  photoUrl          String?
   isApproved        Boolean @default(false)
   maxVisitorsPerDay Int     @default(10)
 

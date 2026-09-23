@@ -1,69 +1,90 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
+import { AuthPanel, authInputClassName } from "@/components/auth/auth-panel";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import type { ActionState } from "@/lib/types";
 
 type EmployeeAuthFormProps = {
-  mode: "login" | "register";
-  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  action: (prev: { error?: string }, formData: FormData) => Promise<{ error?: string }>;
 };
 
-export function EmployeeAuthForm({ mode, action }: EmployeeAuthFormProps) {
+const fields = [
+  { id: "fullName", name: "fullName", label: "Full name", type: "text", autoComplete: "name" },
+  { id: "department", name: "department", label: "Department", type: "text", autoComplete: "organization" },
+  { id: "phone", name: "phone", label: "Phone", type: "tel", autoComplete: "tel" },
+  { id: "email", name: "email", label: "Work email", type: "email", autoComplete: "email" },
+] as const;
+
+export function EmployeeAuthForm({ action }: EmployeeAuthFormProps) {
   const [state, formAction, pending] = useActionState(action, {});
 
   return (
-    <Card className="max-w-md bg-card/90 shadow-none">
-      <form action={formAction}>
-        <CardContent className="space-y-4 pt-6">
-          {state.error ? (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {state.error}
-            </p>
-          ) : null}
+    <AuthPanel>
+      <h1 className="pr-12 text-2xl font-semibold tracking-tight">Get employee access</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        An admin approves the account before you can host visitors.
+      </p>
 
-          {mode === "register" ? (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full name</Label>
-                <Input id="fullName" name="fullName" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Input id="department" name="department" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" name="phone" type="tel" required />
-              </div>
-            </>
-          ) : null}
+      <form action={formAction} className="mt-6 space-y-3">
+        {state.error ? (
+          <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {state.error}
+          </p>
+        ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Work email</Label>
-            <Input id="email" name="email" type="email" required autoComplete="email" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+        {fields.map((field) => (
+          <div key={field.id}>
+            <label htmlFor={field.id} className="sr-only">
+              {field.label}
+            </label>
             <Input
-              id="password"
-              name="password"
-              type="password"
+              id={field.id}
+              name={field.name}
+              type={field.type}
               required
-              minLength={8}
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              autoComplete={field.autoComplete}
+              placeholder={field.label}
+              className={authInputClassName}
             />
           </div>
-        </CardContent>
-        <CardFooter>
-          <Button type="submit" size="lg" className="w-full" disabled={pending}>
-            {pending ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
-          </Button>
-        </CardFooter>
+        ))}
+
+        <div>
+          <label htmlFor="password" className="sr-only">
+            Password
+          </label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            placeholder="Password, at least 8 characters"
+            className={authInputClassName}
+          />
+        </div>
+
+        <Button
+          type="submit"
+          disabled={pending}
+          className="mt-2 h-12 w-full rounded-xl text-base font-semibold"
+        >
+          {pending ? "Creating account…" : "Create account"}
+        </Button>
       </form>
-    </Card>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Already registered?{" "}
+        <Link
+          href="/login"
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          Sign in
+        </Link>
+      </p>
+    </AuthPanel>
   );
 }

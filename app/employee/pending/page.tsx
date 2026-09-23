@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { PageShell } from "@/components/layout/page-shell";
-import { logoutEmployee } from "@/app/actions/auth";
+import { logout } from "@/app/actions/auth";
 import { getEmployeeSessionOptional } from "@/lib/auth/guards";
 import { Button } from "@/components/ui/button";
 
@@ -15,13 +15,15 @@ export default async function EmployeePendingPage() {
 
   return (
     <PageShell title="Awaiting admin approval">
-      <p className="text-sm leading-relaxed text-muted-foreground">
-        Hi {employee.fullName}, your account ({employee.email}) is waiting for an admin to
-        approve it.
-      </p>
-      <form action={logoutEmployee} className="mt-8">
-        <Button type="submit" variant="outline">Sign out</Button>
-      </form>
+      <div className="rounded-xl border border-border bg-card p-5 sm:p-6">
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Hi {employee.fullName}, your account ({employee.email}) is waiting for an admin to
+          approve it.
+        </p>
+        <form action={logout} className="mt-6">
+          <Button type="submit" variant="outline">Sign out</Button>
+        </form>
+      </div>
     </PageShell>
   );
 }

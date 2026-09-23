@@ -5,12 +5,12 @@ import { getSession } from "@/lib/auth/session";
 export async function requireAdmin() {
   const session = await getSession();
   if (!session || session.role !== "admin") {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   const admin = await prisma.admin.findUnique({ where: { id: session.id } });
   if (!admin) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return admin;
@@ -19,12 +19,12 @@ export async function requireAdmin() {
 export async function requireEmployee() {
   const session = await getSession();
   if (!session || session.role !== "employee") {
-    redirect("/employee/login");
+    redirect("/login");
   }
 
   const employee = await prisma.employee.findUnique({ where: { id: session.id } });
   if (!employee) {
-    redirect("/employee/login");
+    redirect("/login");
   }
 
   if (!employee.isApproved) {

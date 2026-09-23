@@ -46,8 +46,11 @@ type QrPassScannerProps = {
 export function QrPassScanner({ onDecode, onError }: QrPassScannerProps) {
   const onDecodeRef = useRef(onDecode);
   const onErrorRef = useRef(onError);
-  onDecodeRef.current = onDecode;
-  onErrorRef.current = onError;
+
+  useEffect(() => {
+    onDecodeRef.current = onDecode;
+    onErrorRef.current = onError;
+  }, [onDecode, onError]);
 
   useEffect(() => {
     let scanner: Html5Qrcode | null = null;

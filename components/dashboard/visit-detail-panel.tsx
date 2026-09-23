@@ -1,7 +1,7 @@
 import Image from "next/image";
-import type { VisitLogEntry } from "@/lib/types";
-import { visitStatusLabel, VISIT_STATUS_BADGE } from "@/lib/visits/status";
-import { formatVisitWindow } from "@/lib/visits/visit-window";
+import type { VisitRow } from "@/lib/visits";
+import { STATUS_BADGE, statusLabel } from "@/lib/visits";
+import { formatWindow } from "@/lib/visits";
 
 function formatWhen(iso: string | null) {
   if (!iso) {
@@ -13,14 +13,14 @@ function formatWhen(iso: string | null) {
   }).format(new Date(iso));
 }
 
-export function VisitDetailPanel({ visit }: { visit: VisitLogEntry }) {
-  const badge = VISIT_STATUS_BADGE[visit.status] ?? "bg-muted text-foreground";
+export function VisitDetailPanel({ visit }: { visit: VisitRow }) {
+  const badge = STATUS_BADGE[visit.status] ?? "bg-muted text-foreground";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${badge}`}>
-          {visitStatusLabel(visit.status)}
+          {statusLabel(visit.status)}
         </span>
         {visit.preApproved ? (
           <span className="text-xs text-muted-foreground">Pre-invited visit</span>
@@ -97,7 +97,7 @@ export function VisitDetailPanel({ visit }: { visit: VisitLogEntry }) {
         <div>
           <dt className="text-muted-foreground">Visit window</dt>
           <dd>
-            {formatVisitWindow(
+            {formatWindow(
               visit.windowStart ? new Date(visit.windowStart) : null,
               visit.windowEnd ? new Date(visit.windowEnd) : null
             )}

@@ -2,69 +2,61 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { sendHostApprovalEmail } from "@/lib/email/host-approval";
-import { requiredString, optionalString } from "@/lib/form";
 import { saveVisitorPhoto } from "@/lib/visitors/photos";
 import { prisma } from "@/lib/db/prisma";
-import { checkInVisit } from "@/lib/visits/check-in";
-import { parseVisitWindow } from "@/lib/visits/visit-window";
-import type { ActionState } from "@/lib/types";
+import { checkInVisit } from "@/lib/visits-db";
+import { parseWindow } from "@/lib/visits";
+
+type ActionState = { error?: string };
+
+const entrySchema = z.object({
+  fullName: z.string().min(1),
+  email: z.string().email(),
+  phone: z.string().min(1),
+  purpose: z.string().min(1),
+  hostId: z.string().min(1),
+  photoData: z.string().min(1),
+  visitFrom: z.string().min(1),
+  visitTo: z.string().min(1),
+  company: z.string().optional(),
+});
 
 export async function createVisitorEntry(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const fullName = requiredString(formData, "fullName");
-  const email = requiredString(formData, "email");
-  const phone = requiredString(formData, "phone");
-  const purpose = requiredString(formData, "purpose");
-  const hostId = requiredString(formData, "hostId");
-  const photoData = requiredString(formData, "photoData");
-  const visitFrom = requiredString(formData, "visitFrom");
-  const visitTo = requiredString(formData, "visitTo");
-  const company = optionalString(formData, "company");
+  const parsed = entrySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Fill in every required field, including a photo." };
 
-  if (!fullName || !email || !phone || !purpose || !hostId) {
-    return { error: "Fill in every required field before submitting." };
-  }
+  const data = parsed.data;
+  const window = parseWindow(data.visitFrom, data.visitTo);
+  if ("error" in window) return { error: window.error };
 
-  if (!photoData) {
-    return { error: "A photo is required at the registration desk." };
-  }
-
-  if (!visitFrom || !visitTo) {
-    return { error: "Choose when your visit starts and ends." };
-  }
-
-  const window = parseVisitWindow(visitFrom, visitTo);
-  if ("error" in window) {
-    return { error: window.error };
-  }
-
-  const host = await prisma.employee.findUnique({ where: { id: hostId } });
-  if (!host?.isApproved) {
-    return { error: "Select a host employee from the list." };
-  }
+  const host = await prisma.employee.findUnique({ where: { id: data.hostId } });
+  if (!host?.isApproved) return { error: "Select a host employee from the list." };
 
   let photoUrl: string;
   try {
-    photoUrl = await saveVisitorPhoto(photoData);
+    photoUrl = await saveVisitorPhoto(data.photoData);
   } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Could not save the photo.",
-    };
+    return { error: error instanceof Error ? error.message : "Could not save the photo." };
   }
 
   const approvalToken = randomUUID();
-  const requestedAt = new Date();
-
   const visitor = await prisma.visitor.create({
-    data: { fullName, email, phone, company },
+    data: {
+      fullName: data.fullName,
+      email: data.email,
+      phone: data.phone,
+      company: data.company || null,
+    },
   });
 
   const visit = await prisma.visit.create({
     data: {
-      purpose,
+      purpose: data.purpose,
       photoUrl,
       approvalToken,
       windowStart: window.windowStart,
@@ -74,24 +66,18 @@ export async function createVisitorEntry(
     },
   });
 
-  const emailResult = await sendHostApprovalEmail({
+  await sendHostApprovalEmail({
     hostEmail: host.email,
     hostName: host.fullName,
-    visitorName: fullName,
-    visitorEmail: email,
-    visitorPhone: phone,
-    company,
-    purpose,
+    visitorName: data.fullName,
+    visitorEmail: data.email,
+    visitorPhone: data.phone,
+    company: data.company || null,
+    purpose: data.purpose,
     photoUrl,
-    requestedAt,
+    requestedAt: new Date(),
     approvalToken,
   });
-
-  if (emailResult.error) {
-    redirect(
-      `/entry/status/${visit.id}?emailError=${encodeURIComponent(emailResult.error)}`
-    );
-  }
 
   redirect(`/entry/status/${visit.id}`);
 }
@@ -100,15 +86,11 @@ export async function checkInByPassCode(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const code = requiredString(formData, "passCode");
-  if (!code) {
-    return { error: "Enter or scan a pass code." };
-  }
+  const code = String(formData.get("passCode") ?? "").trim();
+  if (!code) return { error: "Enter or scan a pass code." };
 
   const result = await checkInVisit(code);
-  if ("error" in result) {
-    return { error: result.error };
-  }
+  if ("error" in result) return { error: result.error };
 
   redirect(`/entry/status/${result.visitId}`);
 }

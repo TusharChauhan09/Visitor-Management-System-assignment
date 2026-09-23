@@ -1,7 +1,10 @@
 "use client";
 
-import { ClipboardList, QrCode } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import { EntryOptionCard } from "@/components/visit/entry-option-card";
+
+const PASS_QR_IMAGE =
+  "https://res.cloudinary.com/du8ekvenq/image/upload/v1790132620/QR_Code_Example_aqxcmk.svg";
 
 export function HomeEntryOptions() {
   return (
@@ -16,7 +19,8 @@ export function HomeEntryOptions() {
         href="/entry/scan"
         title="I have a pass"
         description="Scan your QR or enter your pass code."
-        icon={QrCode}
+        imageSrc={PASS_QR_IMAGE}
+        imageAlt="Example visitor pass QR code"
       />
     </div>
   );

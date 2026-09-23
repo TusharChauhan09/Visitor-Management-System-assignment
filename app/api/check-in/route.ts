@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkInVisit } from "@/lib/visits/check-in";
+import { checkInVisit } from "@/lib/visits-db";
 
 export async function POST(request: Request) {
   let body: { code?: string };

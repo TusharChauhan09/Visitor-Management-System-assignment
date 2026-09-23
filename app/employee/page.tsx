@@ -1,9 +1,7 @@
 import { EmployeeDashboard } from "@/components/employee/employee-dashboard";
 import { DeskHomeLink, DeskLayout } from "@/components/layout/desk-layout";
 import { requireEmployee } from "@/lib/auth/guards";
-import { buildCheckInUrl } from "@/lib/visits/pass-code";
-import { countByStatus, serializeVisitLog } from "@/lib/visits/visit-log";
-import { endOfLocalDay, startOfLocalDay } from "@/lib/visits/visit-window";
+import { checkInUrl, countByStatus, endOfDay, serializeVisit, startOfDay } from "@/lib/visits";
 import { getAppUrl } from "@/lib/config/app-url";
 import { prisma } from "@/lib/db/prisma";
 
@@ -28,24 +26,25 @@ export default async function EmployeeDashboardPage({
     where: {
       hostId: employee.id,
       preApproved: true,
-      createdAt: { gte: startOfLocalDay(), lte: endOfLocalDay() },
+      createdAt: { gte: startOfDay(), lte: endOfDay() },
     },
   });
 
-  const serialized = visits.map(serializeVisitLog);
+  const serialized = visits.map(serializeVisit);
   const pendingVisits = serialized.filter((v) => v.status === "PENDING");
 
   const latestInvite = invited
     ? visits.find((v) => v.id === invited && v.qrCode)
     : null;
   const inviteUrl = latestInvite?.qrCode
-    ? buildCheckInUrl(latestInvite.qrCode, getAppUrl())
+    ? checkInUrl(latestInvite.qrCode, getAppUrl())
     : null;
 
   return (
     <DeskLayout trailing={<DeskHomeLink />}>
       <EmployeeDashboard
         employeeName={employee.fullName}
+        photoUrl={employee.photoUrl}
         department={employee.department}
         email={employee.email}
         maxVisitorsPerDay={employee.maxVisitorsPerDay}
