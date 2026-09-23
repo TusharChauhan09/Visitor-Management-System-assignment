@@ -1,12 +1,11 @@
 # Visitor Management System
 
 A desk-side visitor management app: walk-in registration, host approval by email, QR pass check-in/out, employee pre-invites, and admin oversight.
+Assignment tech stack (original brief):
+
+![Assignment tech stack](docs/assignment-tech-stack.png)
 
 ## Assignment overview (architecture)
-
-Assignment system flow (original brief):
-
-![Assignment architecture — entry portal, host approval, QR scan, database](docs/assignment-architecture.png)
 
 Implemented flow (includes **check-out**: second pass scan at `/entry/scan` when leaving):
 
@@ -41,12 +40,11 @@ flowchart TB
   EmpDash --> DB
   AdminDash --> DB
 ```
+Assignment system flow (original brief):
+
+![Assignment architecture — entry portal, host approval, QR scan, database](docs/assignment-architecture.png)
 
 **Checkout (implemented):** same pass scan at `/entry/scan` — first scan **APPROVED → CHECKED_IN**, second scan **CHECKED_IN → CHECKED_OUT** (pass invalidated, `qrCode` cleared). Status page shows exit success after checkout.
-
-Assignment tech stack (original brief):
-
-![Assignment tech stack](docs/assignment-tech-stack.png)
 
 | Area | Choice |
 |------|--------|
